@@ -1,0 +1,62 @@
+# Visual Studio artefakti
+.vs/
+bin/
+obj/
+appsettings.json
+app.db
+
+Migrations/
+*.mdf
+*.ldf
+
+# User-specifični fajlovi
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# IDE postavke
+.vscode/
+.idea/
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+*.ncrunch*
+_NCrunch_*
+*.nuproj.user
+
+# Logovi i coverage
+*.log
+logs/
+TestResults/
+*.coverage
+*.coveragexml
+coverage*/
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+# (globalni NuGet cache je van repo-a, ovo je za slučaj lokalnog packages/ foldera)
+
+# Lokalni DB fajlovi
+*.mdf
+*.ldf
+*.ndf
+*.sqlite
+*.db
+
+# AppSettings lokalne varijante (tajne/drugi lokalni override-i)
+appsettings.Local.json
+appsettings.*.local.json
+
+# Azure/Publish lokalne konfiguracije (po potrebi)
+Properties/ServiceDependencies/
+Properties/ServiceDependencies*/
+
+# OS fajlovi
+.DS_Store
+Thumbs.db
+
+# Ostalo
+*.bak
