@@ -18,5 +18,11 @@ namespace quizhub_backend.Models
 
         [Required]
         public DateTime DateOfPlay { get; set; }
+
+        [Required]
+        public double Points { get; set; } = 0;
+
+        [Required]
+        public double MaxPoints { get; set; } = 0;
     }
 }

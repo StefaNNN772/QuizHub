@@ -8,9 +8,9 @@ namespace quizhub_backend.Models
         [Key]
         public long Id { get; set; }
 
-        [ForeignKey("Result")]
-        public long ResultId { get; set; }
-        public virtual Result Result { get; set; }
+        [ForeignKey("User")]
+        public long UserId { get; set; }
+        public virtual User User { get; set; }
 
         [ForeignKey("Question")]
         public long QuestionId { get; set; }
@@ -18,5 +18,8 @@ namespace quizhub_backend.Models
 
         [Required]
         public string AnswerBody { get; set; }
+
+        [Required]
+        public bool IsTrue { get; set; }
     }
 }

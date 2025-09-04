@@ -8,10 +8,6 @@ namespace quizhub_backend.Models
         [Key]
         public long Id { get; set; }
 
-        [ForeignKey("Topic")]
-        public long TopicId { get; set; }
-        public virtual Topic Topic { get; set; }
-
         [Required]
         public string Title { get; set; }
 

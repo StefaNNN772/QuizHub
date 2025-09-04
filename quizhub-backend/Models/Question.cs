@@ -17,5 +17,8 @@ namespace quizhub_backend.Models
 
         [Required]
         public QuestionType Type { get; set; }
+
+        [Required]
+        public double Points { get; set; }
     }
 }
