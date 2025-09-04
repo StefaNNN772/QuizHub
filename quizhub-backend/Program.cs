@@ -14,9 +14,10 @@ public class Program
             options.AddPolicy("FrontendDev", policy =>
             {
                 policy
-                    .WithOrigins("http://localhost:5173")
+                    .WithOrigins("http://localhost:3000")
                     .AllowAnyHeader()
-                    .AllowAnyMethod();
+                    .AllowAnyMethod()
+                    .AllowCredentials();
             });
         });
 
@@ -36,7 +37,8 @@ public class Program
         builder.Services.AddScoped<UserRepository>();
         builder.Services.AddScoped<QuizService>();
         builder.Services.AddScoped<QuizRepository>();
-        //builder.Services.AddScoped<TokenService>();
+        builder.Services.AddScoped<TokenService>();
+        builder.Services.AddScoped<AuthenticationManager>();
         //builder.Services.AddScoped<EmailService>();
         //builder.Services.AddScoped<SchedulesRepository>();
         //builder.Services.AddScoped<SchedulesService>();
@@ -63,6 +65,8 @@ public class Program
         app.UseHttpsRedirection();
 
         app.UseCors("FrontendDev");
+
+        app.UseStaticFiles();
 
         app.UseAuthorization();
 
