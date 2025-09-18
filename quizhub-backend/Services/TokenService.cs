@@ -17,16 +17,15 @@ namespace quizhub_backend.Services
         private static readonly string AUDIENCE_WEB = "web";
         private static readonly string SIGNATURE_ALGORITHM = SecurityAlgorithms.HmacSha512;
 
-        public string GenerateToken(string username, long userId, UserRole userRole)
+        public string GenerateToken(UserDTO user)
         {
             var claims = new[]
             {
-            new Claim(JwtRegisteredClaimNames.Iss, APP_NAME),
-            new Claim(JwtRegisteredClaimNames.Sub, username),
-            new Claim("id", userId.ToString()),
-            new Claim("role", userRole.ToString()),
-            new Claim(JwtRegisteredClaimNames.Aud, AUDIENCE_WEB),
-            new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString(), ClaimValueTypes.DateTime),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Role, user.Role.ToString()),
+            new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
         };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SECRET));

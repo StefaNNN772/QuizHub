@@ -32,5 +32,10 @@ namespace quizhub_backend.Services
         {
             return await _userRepository.CreateUserAsync(user);
         }
+
+        public async Task<UserDTO> GetUserById(long id)
+        {
+            return await _userRepository.GetUserById(id);
+        }
     }
 }

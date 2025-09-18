@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using quizhub_backend.DTOs;
 using quizhub_backend.Models;
+using quizhub_backend.Repository;
 using quizhub_backend.Services;
+using System.Security.Claims;
 
 namespace quizhub_backend.Controllers
 {
@@ -38,22 +41,21 @@ namespace quizhub_backend.Controllers
                 }
 
                 // Generate JWT token
-                var jwt = _tokenService.GenerateToken(userDto.Email, userDto.Id, userDto.Role);
+                var jwt = _tokenService.GenerateToken(userDto);
                 var expiresIn = _tokenService.GetExpiresIn();
 
-                return Ok(new UserTokenState
+                return Ok(new
                 {
-                    AccessToken = jwt,
-                    ExpiresIn = expiresIn,
-                    User = new UserTokenCredentials
+                    token = jwt,
+                    user = new
                     {
-                        Id = userDto.Id,
-                        Email = userDto.Email,
-                        Role = userDto.Role,
-                        Username = userDto.Username,
-                        ProfileImage = userDto.ProfileImage
+                        id = userDto.Id,
+                        email = userDto.Email,
+                        role = userDto.Role.ToString(),
+                        username = userDto.Username,
+                        profileImage = userDto.ProfileImage
                     }
-            });
+                });
             }
             else
             {
@@ -64,30 +66,19 @@ namespace quizhub_backend.Controllers
         [HttpPost("auth/register")]
         [Produces("application/json")]
         [RequestSizeLimit(5_000_000)]
-        public async Task<IActionResult> Register([FromForm] RegisterUserDTO user)
+        public async Task<IActionResult> Register([FromBody] RegisterUserDTO user)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var allowed = new[] { "image/jpeg", "image/png", "image/webp", "image/jpg" };
+            byte[] imageBytes = Convert.FromBase64String(user.ProfileImage);
 
-            if (!allowed.Contains(user.ProfileImage.ContentType))
-                return BadRequest("Unsupproted image type.");
+            string fileName = $"{Guid.NewGuid()}.jpg";
+            string filePath = Path.Combine("wwwroot", "profileImages", fileName);
 
-            var imgDir = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "profile-images");
-            if (!Directory.Exists(imgDir))
-                Directory.CreateDirectory(imgDir);
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath));
 
-            var fileExt = Path.GetExtension(user.ProfileImage.FileName);
-            var fileName = $"{Guid.NewGuid()}{fileExt}";
-            var fullPath = Path.Combine(imgDir, fileName);
-
-            using (var stream = new FileStream(fullPath, FileMode.Create))
-            {
-                await user.ProfileImage.CopyToAsync(stream);
-            }
-
-            var imageUrl = $"/profile-images/{fileName}";
+            await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
 
             var userDto = await _userService.FindUserByEmailAsync(user.Email);
 
@@ -98,13 +89,18 @@ namespace quizhub_backend.Controllers
 
             var userDtoUsername = await _userService.FindUserByUsernameAsync(user.Username);
 
+            if (userDtoUsername != null)
+            {
+                return StatusCode(500, "User with this username already exists.");
+            }
+
             UserDTO newUser = new UserDTO
             {
                 Email = user.Email,
                 Password = user.Password,
                 Role = UserRole.User,
                 Username = user.Username,
-                ProfileImage = imageUrl
+                ProfileImage = $"/profileImages/{fileName}"
             };
 
             var createdUser = await _userService.CreateUserAsync(newUser);
@@ -116,20 +112,51 @@ namespace quizhub_backend.Controllers
 
 
             // Generate JWT token
-            var jwt = _tokenService.GenerateToken(createdUser.Email, createdUser.Id, UserRole.User);
+            var jwt = _tokenService.GenerateToken(createdUser);
             var expiresIn = _tokenService.GetExpiresIn();
 
-            return Ok(new UserTokenState
+            return Ok(new
             {
-                AccessToken = jwt,
-                ExpiresIn = expiresIn,
-                User = new UserTokenCredentials
+                token = jwt,
+                user = new
                 {
-                    Id = createdUser.Id,
-                    Email = createdUser.Email,
-                    Role = createdUser.Role,
-                    Username = createdUser.Username,
-                    ProfileImage = createdUser.ProfileImage
+                    id = createdUser.Id,
+                    email = createdUser.Email,
+                    role = createdUser.Role.ToString(),
+                    username = createdUser.Username,
+                    profileImage = createdUser.ProfileImage
+                }
+            });
+        }
+
+        [Authorize]
+        [HttpGet("auth/me")]
+        [Produces("application/json")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            // Token je već verifikovan kroz [Authorize] atribut
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var user = await _userService.GetUserById(int.Parse(userId));
+
+            if (user == null)
+                return NotFound();
+
+            string token = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+
+            return Ok(new
+            {
+                token = token,
+                user = new
+                {
+                    id = user.Id,
+                    email = user.Email,
+                    role = user.Role.ToString(),
+                    username = user.Username,
+                    profileImage = user.ProfileImage
                 }
             });
         }

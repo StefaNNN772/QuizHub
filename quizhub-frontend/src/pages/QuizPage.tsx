@@ -1,386 +1,353 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Quiz, Question, QuestionType, Answer } from '../types';
-import { quizAPI } from '../services/api';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Clock, AlertTriangle } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { 
+  Typography, 
+  Box, 
+  Button, 
+  Radio, 
+  RadioGroup, 
+  FormControlLabel, 
+  FormControl, 
+  FormLabel, 
+  Checkbox, 
+  TextField,
+  Paper,
+  CircularProgress,
+  LinearProgress,
+  Card,
+  CardContent,
+  Alert,
+  Divider
+} from '@mui/material';
+import { getQuizById, getQuestions, getAnswers, submitQuizAnswers } from '../api/quizService';
+import { Quiz, Question, Answer, QuestionType } from '../types/models';
 
-export const QuizPage: React.FC = () => {
+const QuizPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [answersMap, setAnswersMap] = useState<Map<number, Answer[]>>(new Map());
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<{ [questionId: number]: string | string[] }>({});
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [quizStarted, setQuizStarted] = useState(false);
+  const [userAnswers, setUserAnswers] = useState<Map<number, string[]>>(new Map());
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (id) {
-      loadQuiz();
+  const fetchQuizData = useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch quiz details
+      const quizData = await getQuizById(parseInt(id));
+      setQuiz(quizData);
+      setTimeLeft(quizData.time * 60); // Convert minutes to seconds
+      
+      // Fetch questions
+      const questionsData = await getQuestions(parseInt(id));
+      setQuestions(questionsData);
+      
+      // Fetch answers for each question
+      const answersMapData = new Map<number, Answer[]>();
+      await Promise.all(
+        questionsData.map(async (question) => {
+          const answers = await getAnswers(question.id);
+          answersMapData.set(question.id, answers);
+        })
+      );
+      setAnswersMap(answersMapData);
+      
+      // Initialize user answers map
+      const initialUserAnswers = new Map<number, string[]>();
+      questionsData.forEach(question => {
+        initialUserAnswers.set(question.id, []);
+      });
+      setUserAnswers(initialUserAnswers);
+      
+    } catch (err) {
+      console.error('Error fetching quiz data:', err);
+      setError('Failed to load quiz. Please try again later.');
+    } finally {
+      setLoading(false);
     }
   }, [id]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    fetchQuizData();
+  }, [fetchQuizData]);
+
+  // Timer effect
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0 || loading) return;
     
-    if (quizStarted && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            handleSubmitQuiz();
-            return 0;
-          }
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev !== null && prev > 0) {
           return prev - 1;
-        });
-      }, 1000);
-    }
-
-    return () => clearInterval(interval);
-  }, [quizStarted, timeLeft]);
-
-  const loadQuiz = async () => {
-    try {
-      const quizData = await quizAPI.getQuiz(Number(id));
-      const questionsData = await quizAPI.getQuizQuestions(Number(id));
-      
-      setQuiz(quizData);
-      setQuestions(questionsData);
-      setTimeLeft(quizData.time * 60); // Konvertuj minute u sekunde
-    } catch (error) {
-      toast.error('Greška pri učitavanju kviza');
-      navigate('/dashboard');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const startQuiz = () => {
-    setQuizStarted(true);
-    toast.success('Kviz je počeo! Srećno!');
-  };
-
-  const handleAnswerChange = (questionId: number, answer: string | string[]) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: answer
-    }));
-  };
-
-  const handleSubmitQuiz = useCallback(async () => {
-    if (isSubmitting) return;
+        }
+        return 0;
+      });
+    }, 1000);
     
-    setIsSubmitting(true);
-    try {
-      const formattedAnswers = Object.entries(answers).map(([questionId, answer]) => ({
-        questionId: Number(questionId),
-        answerBody: Array.isArray(answer) ? answer.join(',') : answer
-      }));
+    return () => clearInterval(timer);
+  }, [timeLeft, loading]);
 
-      const result = await quizAPI.submitQuiz(Number(id), formattedAnswers);
-      navigate(`/quiz/${id}/result`, { state: { result } });
-    } catch (error) {
-      toast.error('Greška pri slanju odgovora');
-    } finally {
-      setIsSubmitting(false);
+  // Auto-submit when time runs out
+  useEffect(() => {
+    if (timeLeft === 0) {
+      handleSubmitQuiz();
     }
-  }, [answers, id, navigate, isSubmitting]);
+  }, [timeLeft]);
 
-  const formatTime = (seconds: number) => {
+  const handleAnswerChange = (questionId: number, value: string, isMultiple: boolean = false) => {
+    setUserAnswers(prev => {
+      const newMap = new Map(prev);
+      if (isMultiple) {
+        const currentAnswers = prev.get(questionId) || [];
+        if (currentAnswers.includes(value)) {
+          // Remove if already selected
+          newMap.set(
+            questionId, 
+            currentAnswers.filter(answer => answer !== value)
+          );
+        } else {
+          // Add if not selected
+          newMap.set(
+            questionId, 
+            [...currentAnswers, value]
+          );
+        }
+      } else {
+        // Single answer (radio or text input)
+        newMap.set(questionId, [value]);
+      }
+      return newMap;
+    });
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrevQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+    }
+  };
+
+  const handleSubmitQuiz = async () => {
+    if (!id || submitting) return;
+    
+    try {
+      setSubmitting(true);
+      setError(null);
+      
+      // Format answers for submission
+      const formattedAnswers = Array.from(userAnswers.entries()).map(([questionId, answers]) => {
+        return {
+          questionId,
+          answerBody: answers.join('|') // Join multiple answers with pipe
+        };
+      });
+      
+      // Submit answers
+      const result = await submitQuizAnswers(parseInt(id), formattedAnswers);
+      
+      // Navigate to results page
+      navigate(`/quiz/${id}/result`, { state: { result } });
+      
+    } catch (err) {
+      console.error('Error submitting quiz:', err);
+      setError('Failed to submit quiz. Please try again.');
+      setSubmitting(false);
+    }
+  };
+
+  const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   };
 
-  const currentQuestion = questions[currentQuestionIndex];
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh' }}>
+        <CircularProgress />
+      </Box>
     );
   }
 
-  if (!quiz || !questions.length) {
+  if (error) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900">Kviz nije pronađen</h2>
-        <Button onClick={() => navigate('/dashboard')} className="mt-4">
-          Nazad na početnu
+      <Box sx={{ mt: 4 }}>
+        <Alert severity="error">{error}</Alert>
+        <Button 
+          variant="outlined" 
+          onClick={() => navigate('/dashboard')} 
+          sx={{ mt: 2 }}
+        >
+          Back to Dashboard
         </Button>
-      </div>
+      </Box>
     );
   }
 
-  if (!quizStarted) {
+  if (!quiz || questions.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>{quiz.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <p className="text-gray-600">{quiz.description}</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-primary-600">{questions.length}</div>
-                <div className="text-sm text-gray-600">Pitanja</div>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-primary-600">{quiz.time}</div>
-                <div className="text-sm text-gray-600">Minuta</div>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-primary-600">
-                  {quiz.difficulty === 'EASY' ? 'Lako' : 
-                   quiz.difficulty === 'MEDIUM' ? 'Srednje' : 'Teško'}
-                </div>
-                <div className="text-sm text-gray-600">Težina</div>
-              </div>
-            </div>
-
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-start space-x-2">
-                <AlertTriangle className="text-yellow-600 mt-0.5" size={20} />
-                <div>
-                  <h4 className="font-medium text-yellow-800">Važne napomene:</h4>
-                  <ul className="mt-2 text-sm text-yellow-700 space-y-1">
-                    <li>• Kada započnete kviz, tajmer će početi da se otkucava</li>
-                    <li>• Kviz će se automatski završiti kada istekne vreme</li>
-                    <li>• Možete se kretati između pitanja</li>
-                    <li>• Odgovore možete menjati dok ne završite kviz</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <Button onClick={startQuiz} className="w-full" size="lg">
-              Započni kviz
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <Box sx={{ mt: 4 }}>
+        <Alert severity="warning">Quiz not found or has no questions.</Alert>
+        <Button 
+          variant="outlined" 
+          onClick={() => navigate('/dashboard')} 
+          sx={{ mt: 2 }}
+        >
+          Back to Dashboard
+        </Button>
+      </Box>
     );
   }
+
+  const currentQuestion = questions[currentQuestionIndex];
+  const currentAnswers = answersMap.get(currentQuestion.id) || [];
+  const currentUserAnswer = userAnswers.get(currentQuestion.id) || [];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header sa vremenom i napretkom */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <h2 className="text-xl font-bold">{quiz.title}</h2>
-              <span className="text-gray-500">
-                Pitanje {currentQuestionIndex + 1} od {questions.length}
-              </span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Clock className={timeLeft < 300 ? 'text-red-500' : 'text-gray-500'} size={20} />
-              <span className={`font-mono text-lg ${timeLeft < 300 ? 'text-red-500' : 'text-gray-700'}`}>
-                {formatTime(timeLeft)}
-              </span>
-            </div>
-          </div>
-          <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-            />
-          </div>
-        </CardContent>
-      </Card>
+    <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4">{quiz.title}</Typography>
+        <Paper sx={{ p: 2, bgcolor: timeLeft && timeLeft < 60 ? '#fff4e5' : undefined }}>
+          <Typography variant="h6" color={timeLeft && timeLeft < 60 ? 'error' : 'textPrimary'}>
+            Time Left: {timeLeft !== null ? formatTime(timeLeft) : 'N/A'}
+          </Typography>
+        </Paper>
+      </Box>
 
-      {/* Pitanje */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">
-            {currentQuestion.body}
-          </CardTitle>
-        </CardHeader>
+      <LinearProgress 
+        variant="determinate" 
+        value={(currentQuestionIndex / questions.length) * 100} 
+        sx={{ mb: 3, height: 10, borderRadius: 5 }}
+      />
+
+      <Typography variant="body2" sx={{ mb: 2 }}>
+        Question {currentQuestionIndex + 1} of {questions.length}
+      </Typography>
+
+      <Card elevation={3} sx={{ mb: 3 }}>
         <CardContent>
-          <QuestionComponent
-            question={currentQuestion}
-            answer={answers[currentQuestion.id]}
-            onAnswerChange={(answer) => handleAnswerChange(currentQuestion.id, answer)}
-          />
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" color="textSecondary">
+              {currentQuestion.points} points • {currentQuestion.type.replace(/([A-Z])/g, ' $1').trim()}
+            </Typography>
+            <Typography variant="h6" component="h2" sx={{ mt: 1 }}>
+              {currentQuestion.body}
+            </Typography>
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+          
+          {currentQuestion.type === QuestionType.OneAnswer && (
+            <FormControl component="fieldset" fullWidth>
+              <FormLabel component="legend">Select one answer:</FormLabel>
+              <RadioGroup 
+                value={currentUserAnswer[0] || ''}
+                onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+              >
+                {currentAnswers.map(answer => (
+                  <FormControlLabel 
+                    key={answer.id} 
+                    value={answer.answerBody} 
+                    control={<Radio />} 
+                    label={answer.answerBody} 
+                  />
+                ))}
+              </RadioGroup>
+            </FormControl>
+          )}
+
+          {currentQuestion.type === QuestionType.MultipleAnswer && (
+            <FormControl component="fieldset" fullWidth>
+              <FormLabel component="legend">Select all correct answers:</FormLabel>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+                {currentAnswers.map(answer => (
+                  <FormControlLabel
+                    key={answer.id}
+                    control={
+                      <Checkbox 
+                        checked={currentUserAnswer.includes(answer.answerBody)} 
+                        onChange={() => handleAnswerChange(currentQuestion.id, answer.answerBody, true)}
+                      />
+                    }
+                    label={answer.answerBody}
+                  />
+                ))}
+              </Box>
+            </FormControl>
+          )}
+
+          {currentQuestion.type === QuestionType.TrueOrFalse && (
+            <FormControl component="fieldset" fullWidth>
+              <FormLabel component="legend">Is this statement true or false?</FormLabel>
+              <RadioGroup 
+                value={currentUserAnswer[0] || ''}
+                onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+              >
+                <FormControlLabel value="True" control={<Radio />} label="True" />
+                <FormControlLabel value="False" control={<Radio />} label="False" />
+              </RadioGroup>
+            </FormControl>
+          )}
+
+          {currentQuestion.type === QuestionType.FillInTheBlank && (
+            <FormControl fullWidth>
+              <FormLabel component="legend">Fill in the blank:</FormLabel>
+              <TextField
+                fullWidth
+                value={currentUserAnswer[0] || ''}
+                onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                margin="normal"
+                placeholder="Your answer..."
+                variant="outlined"
+              />
+            </FormControl>
+          )}
         </CardContent>
       </Card>
 
-      {/* Navigacija */}
-      <div className="flex justify-between items-center">
-        <Button
-          variant="outline"
-          onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Button 
+          variant="outlined" 
+          onClick={handlePrevQuestion} 
           disabled={currentQuestionIndex === 0}
         >
-          Prethodno pitanje
+          Previous
         </Button>
-
-        <div className="space-x-2">
-          {currentQuestionIndex === questions.length - 1 ? (
-            <Button
-              onClick={handleSubmitQuiz}
-              isLoading={isSubmitting}
-              disabled={isSubmitting}
-            >
-              Završi kviz
-            </Button>
-          ) : (
-            <Button
-              onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
-            >
-              Sledeće pitanje
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Pregled pitanja */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Pregled pitanja</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-            {questions.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentQuestionIndex(index)}
-                className={`
-                  w-10 h-10 rounded-lg border-2 text-sm font-medium transition-colors
-                  ${index === currentQuestionIndex 
-                    ? 'border-primary-600 bg-primary-600 text-white' 
-                    : answers[questions[index].id]
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                  }
-                `}
-              >
-                {index + 1}
-              </button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        
+        {currentQuestionIndex < questions.length - 1 ? (
+          <Button 
+            variant="contained" 
+            onClick={handleNextQuestion}
+          >
+            Next
+          </Button>
+        ) : (
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={handleSubmitQuiz}
+            disabled={submitting}
+          >
+            {submitting ? 'Submitting...' : 'Submit Quiz'}
+          </Button>
+        )}
+      </Box>
+    </Box>
   );
 };
 
-// Komponenta za renderovanje pitanja na osnovu tipa
-interface QuestionComponentProps {
-  question: Question;
-  answer: string | string[] | undefined;
-  onAnswerChange: (answer: string | string[]) => void;
-}
-
-const QuestionComponent: React.FC<QuestionComponentProps> = ({ question, answer, onAnswerChange }) => {
-  const [questionAnswers, setQuestionAnswers] = useState<Answer[]>([]);
-
-  useEffect(() => {
-    // Ovde biste normalno učitali odgovore za pitanje iz API-ja
-    // Za demonstraciju, koristim mock podatke
-    const mockAnswers: Answer[] = [
-      { id: 1, questionId: question.id, answerBody: 'Odgovor A', isTrue: false },
-      { id: 2, questionId: question.id, answerBody: 'Odgovor B', isTrue: true },
-      { id: 3, questionId: question.id, answerBody: 'Odgovor C', isTrue: false },
-      { id: 4, questionId: question.id, answerBody: 'Odgovor D', isTrue: false },
-    ];
-    setQuestionAnswers(mockAnswers);
-  }, [question.id]);
-
-  switch (question.type) {
-    case QuestionType.SINGLE_CHOICE:
-      return (
-        <div className="space-y-3">
-          {questionAnswers.map((ans) => (
-            <label key={ans.id} className="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="radio"
-                name={`question-${question.id}`}
-                value={ans.answerBody}
-                checked={answer === ans.answerBody}
-                onChange={(e) => onAnswerChange(e.target.value)}
-                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
-              />
-              <span className="text-gray-700">{ans.answerBody}</span>
-            </label>
-          ))}
-        </div>
-      );
-
-    case QuestionType.MULTIPLE_CHOICE:
-      const selectedAnswers = Array.isArray(answer) ? answer : [];
-      return (
-        <div className="space-y-3">
-          {questionAnswers.map((ans) => (
-            <label key={ans.id} className="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="checkbox"
-                value={ans.answerBody}
-                checked={selectedAnswers.includes(ans.answerBody)}
-                onChange={(e) => {
-                  const newAnswers = e.target.checked
-                    ? [...selectedAnswers, ans.answerBody]
-                    : selectedAnswers.filter(a => a !== ans.answerBody);
-                  onAnswerChange(newAnswers);
-                }}
-                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-              />
-              <span className="text-gray-700">{ans.answerBody}</span>
-            </label>
-          ))}
-        </div>
-      );
-
-    case QuestionType.TRUE_FALSE:
-      return (
-        <div className="space-y-3">
-          <label className="flex items-center space-x-3 cursor-pointer">
-            <input
-              type="radio"
-              name={`question-${question.id}`}
-              value="true"
-              checked={answer === 'true'}
-              onChange={(e) => onAnswerChange(e.target.value)}
-              className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
-            />
-            <span className="text-gray-700">Tačno</span>
-          </label>
-          <label className="flex items-center space-x-3 cursor-pointer">
-            <input
-              type="radio"
-              name={`question-${question.id}`}
-              value="false"
-              checked={answer === 'false'}
-              onChange={(e) => onAnswerChange(e.target.value)}
-              className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
-            />
-            <span className="text-gray-700">Netačno</span>
-          </label>
-        </div>
-      );
-
-    case QuestionType.FILL_IN_BLANK:
-      return (
-        <div>
-          <input
-            type="text"
-            value={typeof answer === 'string' ? answer : ''}
-            onChange={(e) => onAnswerChange(e.target.value)}
-            placeholder="Unesite vaš odgovor..."
-            className="input w-full"
-          />
-        </div>
-      );
-
-    default:
-      return <div>Nepoznat tip pitanja</div>;
-  }
-};
+export default QuizPage;

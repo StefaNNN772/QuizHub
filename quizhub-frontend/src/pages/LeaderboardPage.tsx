@@ -1,184 +1,207 @@
 import React, { useState, useEffect } from 'react';
-import { LeaderboardEntry, Quiz } from '../types';
-import { resultAPI, quizAPI } from '../services/api';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
-import { Trophy, Medal, Award, Crown} from 'lucide-react';
-import toast from 'react-hot-toast';
+import { 
+  Typography, 
+  Box, 
+  Paper, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableContainer, 
+  TableHead, 
+  TableRow,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Avatar,
+  CircularProgress,
+  Alert,
+  Chip
+} from '@mui/material';
+import { getLeaderboard, getQuizzes } from '../api/quizService';
+import { Result, Quiz } from '../types/models';
+import { useAuth } from '../context/AuthContext';
 
-export const LeaderboardPage: React.FC = () => {
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+const LeaderboardPage: React.FC = () => {
+  const { user } = useAuth();
+  const [results, setResults] = useState<Result[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [selectedQuiz, setSelectedQuiz] = useState<number | undefined>();
-  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('all');
-  const [isLoading, setIsLoading] = useState(true);
+  const [selectedQuiz, setSelectedQuiz] = useState<string>('');
+  const [period, setPeriod] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadQuizzes();
+    const fetchQuizzes = async () => {
+      try {
+        const data = await getQuizzes();
+        setQuizzes(data);
+      } catch (err) {
+        console.error('Error fetching quizzes:', err);
+      }
+    };
+
+    fetchQuizzes();
   }, []);
 
   useEffect(() => {
-    loadLeaderboard();
-  }, [selectedQuiz, selectedPeriod]);
+    const fetchLeaderboard = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const quizId = selectedQuiz ? parseInt(selectedQuiz) : undefined;
+        const data = await getLeaderboard(quizId, period);
+        setResults(data);
+      } catch (err) {
+        console.error('Error fetching leaderboard:', err);
+        setError('Failed to load leaderboard. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const loadQuizzes = async () => {
-    try {
-      const data = await quizAPI.getQuizzes();
-      setQuizzes(data);
-    } catch (error) {
-      toast.error('Greška pri učitavanju kvizova');
-    }
+    fetchLeaderboard();
+  }, [selectedQuiz, period]);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
   };
 
-  const loadLeaderboard = async () => {
-    setIsLoading(true);
-    try {
-      const data = await resultAPI.getLeaderboard(selectedQuiz, selectedPeriod);
-      setLeaderboard(data);
-    } catch (error) {
-      toast.error('Greška pri učitavanju rang liste');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getRankIcon = (position: number) => {
-    switch (position) {
-      case 1:
-        return <Crown className="text-yellow-500" size={24} />;
-      case 2:
-        return <Medal className="text-gray-400" size={24} />;
-      case 3:
-        return <Award className="text-amber-600" size={24} />;
-      default:
-        return <span className="text-lg font-bold text-gray-600">{position}</span>;
-    }
-  };
-
-  const getRankBg = (position: number) => {
-    switch (position) {
-      case 1:
-        return 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-200';
-      case 2:
-        return 'bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200';
-      case 3:
-        return 'bg-gradient-to-r from-amber-50 to-amber-100 border-amber-200';
-      default:
-        return 'bg-white border-gray-200';
-    }
+  const calculatePercentage = (points: number, maxPoints: number) => {
+    return maxPoints > 0 ? Math.round((points / maxPoints) * 100) : 0;
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Rang lista</h1>
-        <p className="text-gray-600">Pogledajte najbolje rezultate i vidite gde se nalazite</p>
-      </div>
+    <Box>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Leaderboard
+      </Typography>
 
-      {/* Filteri */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filteri</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Kviz
-              </label>
-              <select
-                value={selectedQuiz || ''}
-                onChange={(e) => setSelectedQuiz(e.target.value ? Number(e.target.value) : undefined)}
-                className="input"
-              >
-                <option value="">Svi kvizovi</option>
-                {quizzes.map((quiz) => (
-                  <option key={quiz.id} value={quiz.id}>
-                    {quiz.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Period
-              </label>
-              <select
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value as 'week' | 'month' | 'all')}
-                className="input"
-              >
-                <option value="all">Svi rezultati</option>
-                <option value="month">Poslednji mesec</option>
-                <option value="week">Poslednja nedelja</option>
-              </select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel>Quiz</InputLabel>
+          <Select
+            value={selectedQuiz}
+            label="Quiz"
+            onChange={(e) => setSelectedQuiz(e.target.value as string)}
+          >
+            <MenuItem value="">All Quizzes</MenuItem>
+            {quizzes.map((quiz) => (
+              <MenuItem key={quiz.id} value={quiz.id.toString()}>
+                {quiz.title}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
-      {/* Rang lista */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Trophy className="text-yellow-500" size={24} />
-            <span>Najbolji rezultati</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            </div>
-          ) : leaderboard.length === 0 ? (
-            <div className="text-center py-8">
-              <Trophy className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Nema rezultata
-              </h3>
-              <p className="text-gray-600">
-                Budite prvi koji će se pojaviti na ovoj rang listi!
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {leaderboard.map((entry) => (
-                <div
-                  key={`${entry.user.id}-${entry.result.id}`}
-                  className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all hover:shadow-md ${getRankBg(entry.position)}`}
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center justify-center w-12 h-12">
-                      {getRankIcon(entry.position)}
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <img
-                        src={entry.user.profileImage || `https://ui-avatars.com/api/?name=${entry.user.username}&background=3b82f6&color=fff`}
-                        alt={entry.user.username}
-                        className="w-10 h-10 rounded-full"
-                      />
-                      <div>
-                        <h4 className="font-medium text-gray-900">{entry.user.username}</h4>
-                        <p className="text-sm text-gray-600">
-                          {new Date(entry.result.dateOfPlay).toLocaleDateString('sr-RS')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xl font-bold text-primary-600">
-                      {Math.round((entry.result.points / entry.result.maxPoints) * 100)}%
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {entry.result.points}/{entry.result.maxPoints} poena
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel>Time Period</InputLabel>
+          <Select
+            value={period}
+            label="Time Period"
+            onChange={(e) => setPeriod(e.target.value as string)}
+          >
+            <MenuItem value="">All Time</MenuItem>
+            <MenuItem value="week">This Week</MenuItem>
+            <MenuItem value="month">This Month</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ my: 2 }}>{error}</Alert>
+      ) : results.length > 0 ? (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell><Typography variant="subtitle2">Rank</Typography></TableCell>
+                <TableCell><Typography variant="subtitle2">User</Typography></TableCell>
+                <TableCell><Typography variant="subtitle2">Quiz</Typography></TableCell>
+                <TableCell align="center"><Typography variant="subtitle2">Score</Typography></TableCell>
+                <TableCell align="center"><Typography variant="subtitle2">Percentage</Typography></TableCell>
+                <TableCell align="right"><Typography variant="subtitle2">Date</Typography></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {results.map((result, index) => {
+                const percentage = calculatePercentage(result.points, result.maxPoints);
+                const isCurrentUser = user?.id === result.userId;
+                
+                return (
+                  <TableRow 
+                    key={result.id}
+                    sx={{ 
+                      backgroundColor: isCurrentUser ? 'rgba(33, 150, 243, 0.08)' : 'inherit',
+                    }}
+                  >
+                    <TableCell>
+                      {index === 0 ? (
+                        <Chip label="1" color="primary" size="small" />
+                      ) : index === 1 ? (
+                        <Chip label="2" color="secondary" size="small" />
+                      ) : index === 2 ? (
+                        <Chip label="3" color="warning" size="small" />
+                      ) : (
+                        <Typography>{index + 1}</Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar 
+                          src={result.user?.profileImage} 
+                          alt={result.user?.username}
+                          sx={{ width: 32, height: 32 }}
+                        />
+                        <Typography>
+                          {result.user?.username}
+                          {isCurrentUser && (
+                            <Chip 
+                              label="You" 
+                              size="small" 
+                              color="primary" 
+                              variant="outlined"
+                              sx={{ ml: 1 }}
+                            />
+                          )}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>{result.quiz?.title}</TableCell>
+                    <TableCell align="center">
+                      {result.points} / {result.maxPoints}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Typography 
+                        variant="body2"
+                        color={percentage >= 70 ? 'success.main' : percentage >= 50 ? 'warning.main' : 'error.main'}
+                        sx={{ fontWeight: 'bold' }}
+                      >
+                        {percentage}%
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">{formatDate(result.dateOfPlay)}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      ) : (
+        <Paper sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="body1">
+            No results found for the selected filters.
+          </Typography>
+        </Paper>
+      )}
+    </Box>
   );
 };
+
+export default LeaderboardPage;

@@ -1,13 +1,36 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using quizhub_backend.Data;
 using quizhub_backend.Repository;
 using quizhub_backend.Services;
+using System.Text;
 
 public class Program
 {
     private static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+
+        builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = "quizHubv1", // Isti kao APP_NAME u TokenService
+                ValidAudience = "web", // Isti kao AUDIENCE_WEB u TokenService
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes("ThisIsAVeryLongSecretKeyThatIsAtLeast64BytesLongForHmacSha512_ExtraPaddingFor512Bits#2025!"))
+            };
+        });
 
         builder.Services.AddCors(options =>
         {
@@ -37,6 +60,10 @@ public class Program
         builder.Services.AddScoped<UserRepository>();
         builder.Services.AddScoped<QuizService>();
         builder.Services.AddScoped<QuizRepository>();
+        builder.Services.AddScoped<QuestionService>();
+        builder.Services.AddScoped<QuestionRepository>();
+        builder.Services.AddScoped<AnswerService>();
+        builder.Services.AddScoped<AnswerRepository>();
         builder.Services.AddScoped<TokenService>();
         builder.Services.AddScoped<AuthenticationManager>();
         //builder.Services.AddScoped<EmailService>();
@@ -64,10 +91,13 @@ public class Program
 
         app.UseHttpsRedirection();
 
+        app.UseRouting();
+
         app.UseCors("FrontendDev");
 
         app.UseStaticFiles();
 
+        app.UseAuthentication();
         app.UseAuthorization();
 
         app.MapControllers();

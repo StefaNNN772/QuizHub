@@ -76,5 +76,17 @@ namespace quizhub_backend.Repository
             await _context.SaveChangesAsync();
             return user;
         }
+
+        public async Task<UserDTO> GetUserById(long id)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+            {
+                return null;
+            }
+
+            return new UserDTO { Email = user.Email, Id = user.Id, Role = user.Role, Username = user.Username, ProfileImage = user.ProfileImage };
+        }
     }
 }
