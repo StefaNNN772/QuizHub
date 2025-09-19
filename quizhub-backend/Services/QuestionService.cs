@@ -26,5 +26,10 @@ namespace quizhub_backend.Services
         {
             return await _questionRepository.GetQuestionAnswers(id);
         }
+
+        public async Task<bool> DeleteQuestion(long id)
+        {
+            return await _questionRepository.DeleteQuestion(id);
+        }
     }
 }

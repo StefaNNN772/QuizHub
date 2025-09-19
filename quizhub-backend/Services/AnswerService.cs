@@ -26,5 +26,10 @@ namespace quizhub_backend.Services
         {
             return await _answerRepository.UpdateAnswer(answerDTO);
         }
+
+        public async Task<List<AnswerDTO>> GetAnswers(long id)
+        {
+            return await _answerRepository.GetAnswers(id);
+        }
     }
 }

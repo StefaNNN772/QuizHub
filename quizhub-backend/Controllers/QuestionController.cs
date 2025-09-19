@@ -75,5 +75,31 @@ namespace quizhub_backend.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+
+        [HttpDelete("questions/{id}")]
+        [Produces("application/json")]
+        public async Task<IActionResult> DeleteQuestion(long id)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var result = await _questionService.DeleteQuestion(id);
+
+                if (!result)
+                {
+                    return StatusCode(500, "Question was not deleted.");
+                }
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
     }
 }

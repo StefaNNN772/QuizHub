@@ -4,16 +4,12 @@ using System.ComponentModel.DataAnnotations;
 
 namespace quizhub_backend.DTOs
 {
-    public class AnswerDTO
+    public class TopicDTO
     {
         public long Id { get; set; }
 
-        public long QuestionId { get; set; }
+        public long QuizId { get; set; }
 
-        public bool IsTrue { get; set; }
-
-        public string AnswerBody { get; set; }
-
-        public Question? QuestionDTO { get; set; }
+        public string About { get; set; }
     }
 }

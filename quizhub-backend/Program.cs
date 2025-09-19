@@ -64,6 +64,8 @@ public class Program
         builder.Services.AddScoped<QuestionRepository>();
         builder.Services.AddScoped<AnswerService>();
         builder.Services.AddScoped<AnswerRepository>();
+        builder.Services.AddScoped<TopicService>();
+        builder.Services.AddScoped<TopicRepository>();
         builder.Services.AddScoped<TokenService>();
         builder.Services.AddScoped<AuthenticationManager>();
         //builder.Services.AddScoped<EmailService>();

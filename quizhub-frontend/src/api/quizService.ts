@@ -71,6 +71,7 @@ export const deleteAnswer = async (id: number): Promise<void> => {
 
 // Results API calls
 export const submitQuizAnswers = async (quizId: number, answers: { questionId: number, answerBody: string }[]): Promise<Result> => {
+  console.log(answers);
   const response = await api.post<Result>(`/quizzes/${quizId}/submit`, { answers });
   return response.data;
 };

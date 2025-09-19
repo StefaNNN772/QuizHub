@@ -130,10 +130,10 @@ const DashboardPage: React.FC = () => {
                   </Typography>
                   {quiz.topics && (
                     <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {quiz.topics.map(topic => (
+                      {quiz.topics.map((topicName, index) => (
                         <Chip 
-                          key={topic.id} 
-                          label={topic.about} 
+                          key={`topic-${index}-${topicName}`} 
+                          label={topicName} 
                           size="small" 
                           variant="outlined"
                         />

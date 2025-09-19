@@ -38,9 +38,7 @@ namespace quizhub_backend.Repository
             if (answer != null)
             {
                 _context.Answers.Remove(answer);
-                await _context.SaveChangesAsync();
-
-                return true;
+                return await _context.SaveChangesAsync() > 0;
             }
 
             return false;
@@ -60,6 +58,23 @@ namespace quizhub_backend.Repository
             }
 
             return false;
+        }
+
+        public async Task<List<AnswerDTO>> GetAnswers(long id)
+        {
+            var answers = await _context.Answers
+                                            .Where(a => a.QuestionId == id)
+                                            .Include(a => a.Question)
+                                            .ToListAsync();
+
+            List<AnswerDTO> answersDTO = new List<AnswerDTO>();
+
+            foreach (var a in answers)
+            {
+                answersDTO.Add(new AnswerDTO { Id = a.Id, AnswerBody = a.AnswerBody, IsTrue = a.IsTrue, QuestionId = a.QuestionId, QuestionDTO = a.Question });
+            }
+
+            return answersDTO;
         }
     }
 }

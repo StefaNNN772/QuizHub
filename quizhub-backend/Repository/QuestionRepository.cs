@@ -16,7 +16,7 @@ namespace quizhub_backend.Repository
 
         public async Task<List<QuestionDTO>> GetQuestions(long id)
         {
-            var questions = await _context.Questions.Where(u => u.Id == id).ToArrayAsync();
+            var questions = await _context.Questions.Where(u => u.QuizId == id).ToListAsync();
 
             List<QuestionDTO> questionsDTO = new List<QuestionDTO>();
 
@@ -76,6 +76,19 @@ namespace quizhub_backend.Repository
             }
 
             return answersDTO;
+        }
+
+        public async Task<bool> DeleteQuestion(long id)
+        {
+            var question = await _context.Questions.FirstOrDefaultAsync(q => q.Id == id);
+
+            if (question != null)
+            {
+                _context.Questions.Remove(question);
+                return await _context.SaveChangesAsync() > 0;
+            }
+
+            return false;
         }
     }
 }

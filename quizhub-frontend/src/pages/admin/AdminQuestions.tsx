@@ -541,9 +541,11 @@ const AdminQuestions: React.FC = () => {
                 labelId="isTrue-label"
                 id="isTrue"
                 name="isTrue"
-                value={answerFormik.values.isTrue}
+                value={answerFormik.values.isTrue ? "true" : "false"}
                 label="Answer Status"
-                onChange={answerFormik.handleChange}
+                onChange={e => {
+                  answerFormik.setFieldValue("isTrue", e.target.value === "true");
+                }}
               >
                 <MenuItem value="true">Correct Answer</MenuItem>
                 <MenuItem value="false">Incorrect Answer</MenuItem>
