@@ -31,5 +31,10 @@ namespace quizhub_backend.Services
         {
             return await _answerRepository.GetAnswers(id);
         }
+
+        public async Task<bool> SaveUserAnswers(List<UserAnswerDTO> answers)
+        {
+            return await _answerRepository.SaveUserAnswers(answers);
+        }
     }
 }

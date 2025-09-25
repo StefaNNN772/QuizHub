@@ -12,11 +12,13 @@ namespace quizhub_backend.Controllers
     {
         private readonly QuizService _quizService;
         private readonly AnswerService _answerService;
+        private readonly ResultService _resultService;
 
-        public QuizController(QuizService quizService, AnswerService answerService)
+        public QuizController(QuizService quizService, AnswerService answerService, ResultService resultService)
         {
             this._quizService = quizService;
-            _answerService = answerService;
+            this._answerService = answerService;
+            this._resultService = resultService;
         }
 
         [HttpPost("quizzes")]
@@ -93,37 +95,87 @@ namespace quizhub_backend.Controllers
                     return Unauthorized();
 
                 List<UserAnswerDTO> userAnswersDTO = new List<UserAnswerDTO>();
+                double maxPoints = 0;
+                double points = 0;
+                long quizId = 0;
 
                 foreach (var answer in answersDTO.Answers)
                 {
                     var questionAnswers = await _answerService.GetAnswers(answer.QuestionId);
+                    maxPoints += questionAnswers[0].QuestionDTO.Points;
+                    quizId = questionAnswers[0].QuestionDTO.QuizId;
 
-                    if (questionAnswers[0].QuestionDTO.Type == QuestionType.TrueOrFalse)
+                    if (questionAnswers[0].QuestionDTO.Type == QuestionType.TrueOrFalse || questionAnswers[0].QuestionDTO.Type == QuestionType.OneAnswer)
                     {
-                        var trueAnswer = questionAnswers.Where(a => a.IsTrue == true).FirstOrDefault();
+                        var trueAnswer = questionAnswers.Where(a => a.IsTrue == true).Select(a => a.AnswerBody).FirstOrDefault();
 
                         if (trueAnswer.Equals(answer.AnswerBody))
                         {
                             userAnswersDTO.Add(new UserAnswerDTO { AnswerBody = answer.AnswerBody, QuestionId = answer.QuestionId, UserId = int.Parse(userId), IsTrue = true });
+                            points += 1;
+                        }
+                        else
+                        {
+                            userAnswersDTO.Add(new UserAnswerDTO { AnswerBody = answer.AnswerBody, QuestionId = answer.QuestionId, UserId = int.Parse(userId), IsTrue = false });
+                        }
+                    }
+                    else if (questionAnswers[0].QuestionDTO.Type == QuestionType.FillInTheBlank)
+                    {
+                        var trueAnswer = questionAnswers.Where(a => a.IsTrue == true).Select(a => a.AnswerBody.ToLower()).FirstOrDefault();
+
+                        if (trueAnswer.Equals(answer.AnswerBody.ToLower()))
+                        {
+                            userAnswersDTO.Add(new UserAnswerDTO { AnswerBody = trueAnswer, QuestionId = answer.QuestionId, UserId = int.Parse(userId), IsTrue = true });
+                            points += 1;
                         }
 
                         userAnswersDTO.Add(new UserAnswerDTO { AnswerBody = answer.AnswerBody, QuestionId = answer.QuestionId, UserId = int.Parse(userId), IsTrue = false });
                     }
-                    else if (questionAnswers[0].QuestionDTO.Type == QuestionType.FillInTheBlank)
-                    {
-
-                    }
                     else if (questionAnswers[0].QuestionDTO.Type == QuestionType.MultipleAnswer)
                     {
+                        string[] multipleAnswers = answer.AnswerBody.Split('|');
 
-                    }
-                    else
-                    {
+                        var trueAnswers = questionAnswers.Where(a => a.IsTrue == true).Select(a => a.AnswerBody);
 
+                        foreach (var userAnswer in multipleAnswers)
+                        {
+                            if (trueAnswers.Contains(userAnswer))
+                            {
+                                userAnswersDTO.Add(new UserAnswerDTO { AnswerBody = userAnswer, QuestionId = answer.QuestionId, UserId = int.Parse(userId), IsTrue = true });
+                                points += 1/(double)trueAnswers.Count();
+                            }
+                            else
+                            {
+                                userAnswersDTO.Add(new UserAnswerDTO { AnswerBody = userAnswer, QuestionId = answer.QuestionId, UserId = int.Parse(userId), IsTrue = false });
+                            }
+                        }
                     }
                 }
 
-                return Ok();
+                var answers = await _answerService.SaveUserAnswers(userAnswersDTO);
+
+                if (!answers)
+                {
+                    return StatusCode(500, "Couldn't save your answers.");
+                }
+
+                ResultDTO resultDTO = new ResultDTO
+                {
+                    QuizId = quizId,
+                    UserId = int.Parse(userId),
+                    DateOfPlay = DateTime.Now.ToString("o"),
+                    Points = points,
+                    MaxPoints = maxPoints
+                };
+
+                var result = await _resultService.SaveUserResult(resultDTO);
+
+                if (!result)
+                {
+                    return StatusCode(500, "Couldn't save your answers.");
+                }
+
+                return Ok(resultDTO);
             }
             catch (Exception ex)
             {

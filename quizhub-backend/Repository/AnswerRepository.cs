@@ -76,5 +76,26 @@ namespace quizhub_backend.Repository
 
             return answersDTO;
         }
+
+        public async Task<bool> SaveUserAnswers(List<UserAnswerDTO> answers)
+        {
+            List<UserAnswer> userAnswers = new List<UserAnswer>();
+
+            foreach (var answer in answers)
+            {
+                UserAnswer userAnswer = new UserAnswer
+                {
+                    UserId = answer.UserId,
+                    QuestionId = answer.QuestionId,
+                    AnswerBody = answer.AnswerBody,
+                    IsTrue = answer.IsTrue
+                };
+
+                userAnswers.Add(userAnswer);
+            }
+
+            _context.UserAnswers.AddRange(userAnswers);
+            return await _context.SaveChangesAsync() > 0;
+        }
     }
 }
