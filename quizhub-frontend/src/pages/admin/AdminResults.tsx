@@ -32,6 +32,8 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import { getAllResults, getQuizzes } from '../../api/quizService';
 import { Result, Quiz } from '../../types/models';
 
+const API_BASE_URL = 'http://localhost:5143/';
+
 const AdminResults: React.FC = () => {
   const [results, setResults] = useState<Result[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -230,7 +232,7 @@ const AdminResults: React.FC = () => {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Avatar 
-                          src={result.user?.profileImage} 
+                          src={`${API_BASE_URL}${result.user?.profileImage}`} 
                           alt={result.user?.username}
                           sx={{ width: 32, height: 32 }}
                         />
@@ -290,7 +292,7 @@ const AdminResults: React.FC = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <Avatar 
-                    src={selectedResult.user?.profileImage} 
+                    src={`${API_BASE_URL}${selectedResult.user?.profileImage}`} 
                     alt={selectedResult.user?.username}
                     sx={{ width: 40, height: 40 }}
                   />

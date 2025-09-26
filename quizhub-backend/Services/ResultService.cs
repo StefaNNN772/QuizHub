@@ -16,5 +16,20 @@ namespace quizhub_backend.Services
         {
             return await _resultRepository.SaveUserResult(resultDTO);
         }
+
+        public async Task<List<ResultDTO>> GetUserResults(long userId)
+        {
+            return await _resultRepository.GetUserResults(userId);
+        }
+
+        public async Task<List<ResultDTO>> GetResults()
+        {
+            return await _resultRepository.GetResults();
+        }
+
+        public async Task<List<ResultDTO>> GetResultsLeaderboard(long? quizId = null, string period = null)
+        {
+            return await _resultRepository.GetResultsLeaderboard(quizId, period);
+        }
     }
 }

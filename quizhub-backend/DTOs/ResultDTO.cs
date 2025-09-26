@@ -1,4 +1,6 @@
-﻿namespace quizhub_backend.DTOs
+﻿using quizhub_backend.Models;
+
+namespace quizhub_backend.DTOs
 {
     public class ResultDTO
     {
@@ -8,7 +10,7 @@
         public string DateOfPlay { get; set; }
         public double Points { get; set; }
         public double MaxPoints { get; set; }
-        public QuizDTO? Quiz { get; set; }
-        public UserDTO? User { get; set; }
+        public Quiz? Quiz { get; set; }
+        public User? User { get; set; }
     }
 }

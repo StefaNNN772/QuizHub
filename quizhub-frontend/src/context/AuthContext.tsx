@@ -29,14 +29,14 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null); // Initialize as null, we'll load from localStorage
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Login function to set token and user
   const login = (token: string, user: User) => {
     localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user)); // Save user object to localStorage too
+    localStorage.setItem('user', JSON.stringify(user));
     setToken(token);
     setUser(user);
   };

@@ -22,6 +22,8 @@ import { getLeaderboard, getQuizzes } from '../api/quizService';
 import { Result, Quiz } from '../types/models';
 import { useAuth } from '../context/AuthContext';
 
+const API_BASE_URL = 'http://localhost:5143/';
+
 const LeaderboardPage: React.FC = () => {
   const { user } = useAuth();
   const [results, setResults] = useState<Result[]>([]);
@@ -155,7 +157,7 @@ const LeaderboardPage: React.FC = () => {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Avatar 
-                          src={result.user?.profileImage} 
+                          src={`${API_BASE_URL}${result.user?.profileImage}`} 
                           alt={result.user?.username}
                           sx={{ width: 32, height: 32 }}
                         />
