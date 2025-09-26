@@ -101,5 +101,24 @@ namespace quizhub_backend.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+
+        [HttpPut("questions/{id}")]
+        [Produces("application/json")]
+        public async Task<IActionResult> UpdateQuestion(long id, [FromBody] QuestionDTO questionDTO)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if ((!String.IsNullOrEmpty(questionDTO.Body) && questionDTO.Body.Length > 200) || (questionDTO.Points < 1 || questionDTO.Points > 10))
+            {
+                return BadRequest();
+            }
+
+            var result = await _questionService.UpdateQuestion(id, questionDTO);
+
+            return Ok(result);
+        }
     }
 }

@@ -182,5 +182,51 @@ namespace quizhub_backend.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+
+        [HttpDelete("quizzes/{id}")]
+        [Produces("application/json")]
+        public async Task<IActionResult> DeleteQuiz(long id)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var result = await _quizService.DeleteQuiz(id);
+
+                if (!result)
+                {
+                    return StatusCode(500, "Quiz was not deleted.");
+                }
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        [HttpPut("quizzes/{id}")]
+        [Produces("application/json")]
+        public async Task<IActionResult> UpdateQuiz(long id, [FromBody] QuizDTO quizDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if ((!String.IsNullOrEmpty(quizDto.Title) && quizDto.Title.Length > 100) || (!String.IsNullOrEmpty(quizDto.Description) && quizDto.Description.Length > 150) ||
+                (quizDto.Time < 1 || quizDto.Time > 120))
+            {
+                return BadRequest();
+            }
+
+            var result = await _quizService.UpdateQuiz(id, quizDto);
+
+            return Ok(result);
+        }
     }
 }

@@ -22,7 +22,9 @@ namespace quizhub_backend.Repository
 
             foreach (var q in questions)
             {
-                questionsDTO.Add(new QuestionDTO { Id = q.Id, QuizId = q.QuizId, Body = q.Body, Type = q.Type.ToString(), Points = q.Points });
+                var answers = await _context.Answers.Where(a => a.QuestionId == q.Id).ToArrayAsync();
+
+                questionsDTO.Add(new QuestionDTO { Id = q.Id, QuizId = q.QuizId, Body = q.Body, Type = q.Type.ToString(), Points = q.Points, Answers = answers });
             }
 
             return questionsDTO;
@@ -89,6 +91,57 @@ namespace quizhub_backend.Repository
             }
 
             return false;
+        }
+
+        public async Task<QuestionDTO> UpdateQuestion(long id, QuestionDTO questionDTO)
+        {
+            var question = await _context.Questions.Where(q => q.Id == id).FirstOrDefaultAsync();
+
+            QuestionType type;
+
+            switch (questionDTO.Type)
+            {
+                case "OneAnswer":
+                    type = QuestionType.OneAnswer;
+                    break;
+                case "MultipleAnswer":
+                    type = QuestionType.MultipleAnswer;
+                    break;
+                case "TrueOrFalse":
+                    type = QuestionType.TrueOrFalse;
+                    break;
+                case "FillInTheBlank":
+                    type = QuestionType.FillInTheBlank;
+                    break;
+                default:
+                    type = QuestionType.OneAnswer;
+                    break;
+            }
+
+            if (question.Type != type)
+            {
+                question.Type = type;
+            }
+
+            if (!String.IsNullOrEmpty(questionDTO.Body) && !question.Body.Equals(questionDTO.Body))
+            {
+                question.Body = questionDTO.Body;
+            }
+
+            if (question.Points != questionDTO.Points)
+            {
+                question.Points = questionDTO.Points;
+            }
+
+            _context.Questions.Update(question);
+            await _context.SaveChangesAsync();
+
+            var answers = await _context.Answers.Where(a => a.QuestionId == id).ToArrayAsync();
+
+            questionDTO.Answers = answers;
+            questionDTO.Id = question.Id;
+
+            return questionDTO;
         }
     }
 }

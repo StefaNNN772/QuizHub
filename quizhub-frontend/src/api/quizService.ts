@@ -22,11 +22,13 @@ export const createQuiz = async (quiz: Omit<Quiz, 'id'>): Promise<Quiz> => {
   return response.data;
 };
 
+// DONE
 export const updateQuiz = async (id: number, quiz: Partial<Quiz>): Promise<Quiz> => {
   const response = await api.put<Quiz>(`/quizzes/${id}`, quiz);
   return response.data;
 };
 
+// DONE
 export const deleteQuiz = async (id: number): Promise<void> => {
   await api.delete(`/quizzes/${id}`);
 };
@@ -44,6 +46,7 @@ export const createQuestion = async (question: Omit<Question, 'id'>): Promise<Qu
   return response.data;
 };
 
+// DONE
 export const updateQuestion = async (id: number, question: Partial<Question>): Promise<Question> => {
   const response = await api.put<Question>(`/questions/${id}`, question);
   return response.data;

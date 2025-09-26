@@ -19,6 +19,8 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import { getQuizzes, getAllResults } from '../../api/quizService';
 import { Quiz, Result } from '../../types/models';
 
+const API_BASE_URL = 'http://localhost:5143/';
+
 const AdminDashboard: React.FC = () => {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [results, setResults] = useState<Result[]>([]);
@@ -156,7 +158,7 @@ const AdminDashboard: React.FC = () => {
                         primary={
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Avatar 
-                              src={result.user?.profileImage} 
+                              src={`${API_BASE_URL}${result.user?.profileImage}`} 
                               alt={result.user?.username}
                               sx={{ width: 24, height: 24 }}
                             />

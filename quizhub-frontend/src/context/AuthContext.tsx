@@ -33,7 +33,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Login function to set token and user
   const login = (token: string, user: User) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
@@ -41,30 +40,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(user);
   };
 
-  // Logout function to clear token and user
   const logout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('user'); // Clear user from localStorage
+    localStorage.removeItem('user');
     setToken(null);
     setUser(null);
   };
 
-  // Effect to initialize auth state on page load
   useEffect(() => {
     const initAuth = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        // Get token from localStorage
         const storedToken = localStorage.getItem('token');
         
         if (!storedToken) {
           setLoading(false);
-          return; // No token, not authenticated
+          return;
         }
         
-        // Check if token is expired
         try {
           const decodedToken: any = jwtDecode(storedToken);
           const currentTime = Date.now() / 1000;
@@ -76,32 +71,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             return;
           }
           
-          // Token is valid, set it
           setToken(storedToken);
           
-          // Try to get cached user first
           const cachedUser = localStorage.getItem('user');
           if (cachedUser) {
             setUser(JSON.parse(cachedUser));
             setLoading(false);
           }
           
-          // Always verify with backend
           try {
             console.log(localStorage)
             const userData = await getCurrentUser();
             if (userData && userData.user) {
               setUser(userData.user);
-              // Update cached user with fresh data
               localStorage.setItem('user', JSON.stringify(userData.user));
             } else {
-              // Backend didn't recognize the token
               logout();
             }
           } catch (apiError) {
             console.error('Error refreshing user data:', apiError);
-            // We don't logout here because we might be offline
-            // Just use the cached user data
           }
         } catch (jwtError) {
           console.error('Invalid token format:', jwtError);

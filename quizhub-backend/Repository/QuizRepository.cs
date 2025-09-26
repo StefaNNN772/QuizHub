@@ -120,9 +120,94 @@ namespace quizhub_backend.Repository
         {
             var quiz = await _context.Quizes.FirstOrDefaultAsync(u => u.Id == id);
 
-            var questions = await _context.Questions.Where(u => u.Id == id).ToArrayAsync();
+            var questions = await _context.Questions.Where(q => q.QuizId == id).ToArrayAsync();
 
-            return new QuizDTO { Id = quiz.Id, Title = quiz.Title, Time = quiz.Time, Description = quiz.Description, Difficulty = quiz.Difficulty.ToString() };
+            var topics = await _context.Topics.Where(t => t.QuizId == id).Select(t => t.About).ToArrayAsync();
+
+            return new QuizDTO { Id = quiz.Id, Title = quiz.Title, Time = quiz.Time, Description = quiz.Description, Difficulty = quiz.Difficulty.ToString(), Questions = questions, Topics = topics };
+        }
+
+        public async Task<bool> DeleteQuiz(long id)
+        {
+            var quiz = await _context.Quizes.FirstOrDefaultAsync(q => q.Id == id);
+
+            if (quiz != null)
+            {
+                _context.Quizes.Remove(quiz);
+                return await _context.SaveChangesAsync() > 0;
+            }
+
+            return false;
+        }
+
+        public async Task<QuizDTO> UpdateQuiz(long id, QuizDTO quizDTO)
+        {
+            var quiz = await _context.Quizes.FirstOrDefaultAsync(q => q.Id == id);
+
+            DifficultyEnum difficulty;
+
+            switch (quizDTO.Difficulty)
+            {
+                case "Easy":
+                    difficulty = DifficultyEnum.Easy;
+                    break;
+                case "Medium":
+                    difficulty = DifficultyEnum.Medium;
+                    break;
+                case "Hard":
+                    difficulty = DifficultyEnum.Hard;
+                    break;
+                default:
+                    difficulty = DifficultyEnum.Easy;
+                    break;
+            }
+
+            if (quiz.Difficulty != difficulty)
+            {
+                quiz.Difficulty = difficulty;
+            }
+
+            if (!String.IsNullOrEmpty(quizDTO.Title))
+            {
+                quiz.Title = quizDTO.Title;
+            }
+
+            if (!String.IsNullOrEmpty(quizDTO.Description))
+            {
+                quiz.Description = quizDTO.Description;
+            }
+
+            if (quiz.Time != quizDTO.Time)
+            {
+                quiz.Time = quizDTO.Time;
+            }
+
+            _context.Quizes.Update(quiz);
+            await _context.SaveChangesAsync();
+
+            if (quizDTO.Topics.Count() != 0)
+            {
+                var topics = await _context.Topics.Where(t => t.QuizId == id).ToListAsync();
+
+                _context.Topics.RemoveRange(topics);
+                await _context.SaveChangesAsync();
+
+                foreach (var topic in quizDTO.Topics)
+                {
+                    Topic newTopic = new Topic
+                    {
+                        About = topic,
+                        QuizId = quiz.Id
+                    };
+
+                    _context.Topics.Add(newTopic);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            quizDTO.Id = quiz.Id;
+
+            return quizDTO;
         }
     }
 }
