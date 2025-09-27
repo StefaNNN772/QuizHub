@@ -18,7 +18,8 @@ import {
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { getQuizById, getQuestions, getAnswers } from '../api/quizService';
-import { Result, Quiz, Question, Answer } from '../types/models';
+import { getUserAnswers } from '../api/quizService';
+import { Result, Quiz, Question, Answer, UserAnswer } from '../types/models';
 
 const QuizResultPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +29,7 @@ const QuizResultPage: React.FC = () => {
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answersMap, setAnswersMap] = useState<Map<number, Answer[]>>(new Map());
+  const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,20 +41,16 @@ const QuizResultPage: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        // Check if result was passed via location state
         if (location.state?.result) {
           setResult(location.state.result);
         }
         
-        // Fetch quiz details
         const quizData = await getQuizById(parseInt(id));
         setQuiz(quizData);
         
-        // Fetch questions
         const questionsData = await getQuestions(parseInt(id));
         setQuestions(questionsData);
         
-        // Fetch answers for each question
         const answersMapData = new Map<number, Answer[]>();
         await Promise.all(
           questionsData.map(async (question) => {
@@ -61,6 +59,12 @@ const QuizResultPage: React.FC = () => {
           })
         );
         setAnswersMap(answersMapData);
+
+        if (location.state?.result) {
+          console.log(location.state.result.id)
+          const ua = await getUserAnswers(location.state.result.id);
+          setUserAnswers(ua);
+        }
         
       } catch (err) {
         console.error('Error fetching quiz result data:', err);
@@ -192,6 +196,7 @@ const QuizResultPage: React.FC = () => {
       {questions.map((question, index) => {
         const answers = answersMap.get(question.id) || [];
         const correctAnswers = answers.filter(a => a.isTrue);
+        const userAnswersForQuestion = userAnswers.filter(ua => ua.questionId === question.id);
         
         return (
           <Card key={question.id} sx={{ mb: 3 }}>
@@ -221,6 +226,25 @@ const QuizResultPage: React.FC = () => {
                     <CheckCircleIcon color="success" sx={{ mr: 1, fontSize: 20 }} />
                     <Typography variant="body2">
                       {answer.answerBody}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Your Answer:
+              </Typography>
+
+              <Box sx={{ pl: 2, mb: 2 }}>
+                {userAnswersForQuestion.map(ua => (
+                  <Box key={ua.id} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    {ua.isTrue ? (
+                      <CheckCircleIcon color="success" sx={{ mr: 1, fontSize: 20 }} />
+                    ) : (
+                      <CancelIcon color="error" sx={{ mr: 1, fontSize: 20 }} />
+                    )}
+                    <Typography variant="body2">
+                      {ua.answerBody}
                     </Typography>
                   </Box>
                 ))}

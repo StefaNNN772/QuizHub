@@ -1,5 +1,5 @@
 import api from './axiosConfig';
-import { Quiz, Question, Answer, Result, Topic } from '../types/models';
+import { Quiz, Question, Answer, Result, Topic, UserAnswer } from '../types/models';
 
 // DONE
 // Quiz API calls
@@ -107,6 +107,11 @@ export const getLeaderboard = async (quizId?: number, period?: string): Promise<
 // DONE
 export const getAllResults = async (): Promise<Result[]> => {
   const response = await api.get<Result[]>('/results');
+  return response.data;
+};
+
+export const getUserAnswers = async (resultId: number): Promise<UserAnswer[]> => {
+  const response = await api.get<UserAnswer[]>(`/results/${resultId}/answers`);
   return response.data;
 };
 

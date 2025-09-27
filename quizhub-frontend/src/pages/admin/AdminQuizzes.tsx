@@ -146,8 +146,9 @@ const AdminQuizzes: React.FC = () => {
                 <TableCell>Title</TableCell>
                 <TableCell>Description</TableCell>
                 <TableCell>Difficulty</TableCell>
+                <TableCell>Topics</TableCell>
                 <TableCell>Time (min)</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell align="center">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>

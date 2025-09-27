@@ -14,7 +14,7 @@ namespace quizhub_backend.Repository
             _context = context;
         }
 
-        public async Task<bool> SaveUserResult(ResultDTO resultDTO)
+        public async Task<ResultDTO> SaveUserResult(ResultDTO resultDTO)
         {
             Result userResult = new Result
             {
@@ -26,7 +26,11 @@ namespace quizhub_backend.Repository
             };
 
             _context.Results.Add(userResult);
-            return await _context.SaveChangesAsync() > 0;
+            await _context.SaveChangesAsync();
+
+            resultDTO.Id = userResult.Id;
+
+            return resultDTO;
         }
 
         public async Task<List<ResultDTO>> GetUserResults(long userId)
@@ -107,9 +111,19 @@ namespace quizhub_backend.Repository
                 }
             }
 
-            List<ResultDTO> resultsDTO = new List<ResultDTO>();
+            Dictionary<Result, double> percentage = new Dictionary<Result, double>(userResults.Count);
 
             foreach (var userResult in userResults)
+            {
+                percentage.Add(userResult, Math.Round((userResult.Points / userResult.MaxPoints) * 100));
+            }
+
+            var sorted = percentage.OrderByDescending(x => x.Value)
+                                    .ToDictionary(x => x.Key, x => x.Value);
+
+            List<ResultDTO> resultsDTO = new List<ResultDTO>(userResults.Count());
+
+            foreach (var userResult in sorted.Keys)
             {
                 resultsDTO.Add(new ResultDTO
                 {
@@ -125,6 +139,27 @@ namespace quizhub_backend.Repository
             }
 
             return resultsDTO;
+        }
+
+        public async Task<List<UserAnswerDTO>> GetUserAnswers(long id)
+        {
+            var userAnswers = await _context.UserAnswers.Where(u => u.ResultId == id).ToListAsync();
+
+            List<UserAnswerDTO> userAnswersDTO = new List<UserAnswerDTO>();
+
+            foreach (var userAnswer in userAnswers)
+            {
+                userAnswersDTO.Add(new UserAnswerDTO
+                {
+                    Id = userAnswer.Id,
+                    AnswerBody = userAnswer.AnswerBody,
+                    IsTrue = userAnswer.IsTrue,
+                    QuestionId = userAnswer.QuestionId,
+                    UserId = userAnswer.UserId
+                });
+            }
+
+            return userAnswersDTO;
         }
     }
 }

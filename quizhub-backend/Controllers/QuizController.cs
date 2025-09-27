@@ -112,7 +112,7 @@ namespace quizhub_backend.Controllers
                         if (trueAnswer.Equals(answer.AnswerBody))
                         {
                             userAnswersDTO.Add(new UserAnswerDTO { AnswerBody = answer.AnswerBody, QuestionId = answer.QuestionId, UserId = int.Parse(userId), IsTrue = true });
-                            points += 1;
+                            points += questionAnswers[0].QuestionDTO.Points;
                         }
                         else
                         {
@@ -125,38 +125,40 @@ namespace quizhub_backend.Controllers
 
                         if (trueAnswer.Equals(answer.AnswerBody.ToLower()))
                         {
-                            userAnswersDTO.Add(new UserAnswerDTO { AnswerBody = trueAnswer, QuestionId = answer.QuestionId, UserId = int.Parse(userId), IsTrue = true });
-                            points += 1;
+                            userAnswersDTO.Add(new UserAnswerDTO { AnswerBody = answer.AnswerBody, QuestionId = answer.QuestionId, UserId = int.Parse(userId), IsTrue = true });
+                            points += questionAnswers[0].QuestionDTO.Points;
                         }
-
-                        userAnswersDTO.Add(new UserAnswerDTO { AnswerBody = answer.AnswerBody, QuestionId = answer.QuestionId, UserId = int.Parse(userId), IsTrue = false });
+                        else
+                        {
+                            userAnswersDTO.Add(new UserAnswerDTO { AnswerBody = answer.AnswerBody, QuestionId = answer.QuestionId, UserId = int.Parse(userId), IsTrue = false });
+                        }
                     }
                     else if (questionAnswers[0].QuestionDTO.Type == QuestionType.MultipleAnswer)
                     {
                         string[] multipleAnswers = answer.AnswerBody.Split('|');
 
                         var trueAnswers = questionAnswers.Where(a => a.IsTrue == true).Select(a => a.AnswerBody);
+                        int numOfTrueAnswers = trueAnswers.Count();
+                        int numOfCorrect = 0;
 
                         foreach (var userAnswer in multipleAnswers)
                         {
                             if (trueAnswers.Contains(userAnswer))
                             {
                                 userAnswersDTO.Add(new UserAnswerDTO { AnswerBody = userAnswer, QuestionId = answer.QuestionId, UserId = int.Parse(userId), IsTrue = true });
-                                points += 1/(double)trueAnswers.Count();
+                                numOfCorrect += 1;
                             }
                             else
                             {
                                 userAnswersDTO.Add(new UserAnswerDTO { AnswerBody = userAnswer, QuestionId = answer.QuestionId, UserId = int.Parse(userId), IsTrue = false });
                             }
                         }
+
+                        if (numOfTrueAnswers == numOfCorrect)
+                        {
+                            points += questionAnswers[0].QuestionDTO.Points;
+                        }
                     }
-                }
-
-                var answers = await _answerService.SaveUserAnswers(userAnswersDTO);
-
-                if (!answers)
-                {
-                    return StatusCode(500, "Couldn't save your answers.");
                 }
 
                 ResultDTO resultDTO = new ResultDTO
@@ -170,12 +172,19 @@ namespace quizhub_backend.Controllers
 
                 var result = await _resultService.SaveUserResult(resultDTO);
 
-                if (!result)
+                if (result == null)
                 {
                     return StatusCode(500, "Couldn't save your answers.");
                 }
 
-                return Ok(resultDTO);
+                var answers = await _answerService.SaveUserAnswers(userAnswersDTO, result.Id);
+
+                if (!answers)
+                {
+                    return StatusCode(500, "Couldn't save your answers.");
+                }
+
+                return Ok(result);
             }
             catch (Exception ex)
             {

@@ -77,7 +77,7 @@ namespace quizhub_backend.Repository
             return answersDTO;
         }
 
-        public async Task<bool> SaveUserAnswers(List<UserAnswerDTO> answers)
+        public async Task<bool> SaveUserAnswers(List<UserAnswerDTO> answers, long id)
         {
             List<UserAnswer> userAnswers = new List<UserAnswer>();
 
@@ -88,7 +88,8 @@ namespace quizhub_backend.Repository
                     UserId = answer.UserId,
                     QuestionId = answer.QuestionId,
                     AnswerBody = answer.AnswerBody,
-                    IsTrue = answer.IsTrue
+                    IsTrue = answer.IsTrue,
+                    ResultId = id
                 };
 
                 userAnswers.Add(userAnswer);

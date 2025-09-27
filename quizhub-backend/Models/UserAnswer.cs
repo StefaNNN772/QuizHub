@@ -12,6 +12,9 @@ namespace quizhub_backend.Models
         public long UserId { get; set; }
         public virtual User User { get; set; }
 
+        [Required]
+        public long ResultId { get; set; }
+
         [ForeignKey("Question")]
         public long QuestionId { get; set; }
         public virtual Question Question { get; set; }

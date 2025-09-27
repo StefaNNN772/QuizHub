@@ -6,6 +6,8 @@
 
         public long UserId { get; set; }
 
+        public long ResultId { get; set; }
+
         public long QuestionId { get; set; }
 
         public string AnswerBody { get; set; }

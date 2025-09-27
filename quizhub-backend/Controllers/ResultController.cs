@@ -67,5 +67,21 @@ namespace quizhub_backend.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+
+        [HttpGet("results/{Id}/answers")]
+        [Produces("application/json")]
+        public async Task<IActionResult> GetUserAnswers(long id)
+        {
+            try
+            {
+                var userAnswersDTO = await _resultService.GetUserAnswers(id);
+
+                return Ok(userAnswersDTO);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
     }
 }
