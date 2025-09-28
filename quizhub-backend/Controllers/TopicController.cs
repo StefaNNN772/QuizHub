@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using quizhub_backend.DTOs;
 using quizhub_backend.Services;
+using quizhub_backend.Services.ServiceInterfaces;
 
 namespace quizhub_backend.Controllers
 {
@@ -8,9 +9,9 @@ namespace quizhub_backend.Controllers
     [Route("/")]
     public class TopicController : ControllerBase
     {
-        private readonly TopicService _topicService;
+        private readonly ITopicService _topicService;
 
-        public TopicController(TopicService topicService)
+        public TopicController(ITopicService topicService)
         {
             this._topicService = topicService;
         }

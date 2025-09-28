@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using quizhub_backend.Services;
+using quizhub_backend.Services.ServiceInterfaces;
 using System.Security.Claims;
 
 namespace quizhub_backend.Controllers
@@ -8,9 +9,9 @@ namespace quizhub_backend.Controllers
     [Route("/")]
     public class ResultController : ControllerBase
     {
-        private readonly ResultService _resultService;
+        private readonly IResultService _resultService;
 
-        public ResultController(ResultService resultService)
+        public ResultController(IResultService resultService)
         {
             this._resultService = resultService;
         }

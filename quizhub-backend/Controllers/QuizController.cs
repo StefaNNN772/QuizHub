@@ -2,6 +2,7 @@
 using quizhub_backend.DTOs;
 using quizhub_backend.Models;
 using quizhub_backend.Services;
+using quizhub_backend.Services.ServiceInterfaces;
 using System.Security.Claims;
 
 namespace quizhub_backend.Controllers
@@ -10,11 +11,11 @@ namespace quizhub_backend.Controllers
     [Route("/")]
     public class QuizController : ControllerBase
     {
-        private readonly QuizService _quizService;
-        private readonly AnswerService _answerService;
-        private readonly ResultService _resultService;
+        private readonly IQuizService _quizService;
+        private readonly IAnswerService _answerService;
+        private readonly IResultService _resultService;
 
-        public QuizController(QuizService quizService, AnswerService answerService, ResultService resultService)
+        public QuizController(IQuizService quizService, IAnswerService answerService, IResultService resultService)
         {
             this._quizService = quizService;
             this._answerService = answerService;

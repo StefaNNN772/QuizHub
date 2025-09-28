@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using quizhub_backend.DTOs;
 using quizhub_backend.Services;
+using quizhub_backend.Services.ServiceInterfaces;
 
 namespace quizhub_backend.Controllers
 {
@@ -8,9 +9,9 @@ namespace quizhub_backend.Controllers
     [Route("/")]
     public class AnswerController : ControllerBase
     {
-        private readonly AnswerService _answerService;
+        private readonly IAnswerService _answerService;
 
-        public AnswerController(AnswerService answerService)
+        public AnswerController(IAnswerService answerService)
         {
             this._answerService = answerService;
         }

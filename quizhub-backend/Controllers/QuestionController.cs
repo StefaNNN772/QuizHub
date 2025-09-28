@@ -1,14 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using quizhub_backend.DTOs;
 using quizhub_backend.Services;
+using quizhub_backend.Services.ServiceInterfaces;
 
 namespace quizhub_backend.Controllers
 {
     public class QuestionController : ControllerBase
     {
-        private readonly QuestionService _questionService;
+        private readonly IQuestionService _questionService;
 
-        public QuestionController(QuestionService questionService)
+        public QuestionController(IQuestionService questionService)
         {
             this._questionService = questionService;
         }

@@ -1,24 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Typography, 
-  Grid, 
-  Card, 
-  CardContent, 
-  CardActions, 
-  Button, 
-  TextField, 
-  MenuItem, 
-  Box,
-  Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  CircularProgress
-} from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
-import { getQuizzes } from '../api/quizService';
-import { getTopics } from '../api/quizService';
+import { Typography, Grid, Box, CircularProgress } from '@mui/material';
+import { getQuizzes, getTopics } from '../api/quizService';
 import { Quiz, DifficultyEnum, Topic } from '../types/models';
+import QuizFilters from '../components/dashboard/QuizFilters';
+import QuizCard from '../components/dashboard/QuizCard';
 
 const DashboardPage: React.FC = () => {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -63,45 +48,15 @@ const DashboardPage: React.FC = () => {
         Available Quizzes
       </Typography>
 
-      <Box sx={{ mb: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <TextField
-          label="Search Quizzes"
-          variant="outlined"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          sx={{ flexGrow: 1, minWidth: '200px' }}
-        />
-        
-        <FormControl sx={{ minWidth: '150px' }}>
-          <InputLabel>Difficulty</InputLabel>
-          <Select
-            value={difficulty}
-            label="Difficulty"
-            onChange={(e) => setDifficulty(e.target.value)}
-          >
-            <MenuItem value="">All Difficulties</MenuItem>
-            <MenuItem value={DifficultyEnum.Easy}>Easy</MenuItem>
-            <MenuItem value={DifficultyEnum.Medium}>Medium</MenuItem>
-            <MenuItem value={DifficultyEnum.Hard}>Hard</MenuItem>
-          </Select>
-        </FormControl>
-        
-        <FormControl sx={{ minWidth: '150px' }}>
-          <InputLabel>Topic</InputLabel>
-          <Select
-            value={topic}
-            label="Topic"
-            onChange={(e) => setTopic(e.target.value)}
-          >
-            <MenuItem value="">All Topics</MenuItem>
-            {topics.map((t) => (
-              <MenuItem key={t.id} value={t.about}>
-                {t.about}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
+      <QuizFilters 
+        search={search}
+        setSearch={setSearch}
+        difficulty={difficulty}
+        setDifficulty={setDifficulty}
+        topic={topic}
+        setTopic={setTopic}
+        topics={topics}
+      />
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
@@ -111,48 +66,7 @@ const DashboardPage: React.FC = () => {
         <Grid container spacing={3}>
           {quizzes.map((quiz) => (
             <Grid item xs={12} sm={6} md={4} key={quiz.id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography variant="h5" component="h2" gutterBottom>
-                    {quiz.title}
-                  </Typography>
-                  <Chip 
-                    label={quiz.difficulty} 
-                    color={getDifficultyColor(quiz.difficulty) as any}
-                    size="small"
-                    sx={{ mb: 2 }}
-                  />
-                  <Typography variant="body2" color="text.secondary" paragraph>
-                    {quiz.description}
-                  </Typography>
-                  <Typography variant="body2">
-                    Time limit: {quiz.time} minutes
-                  </Typography>
-                  {quiz.topics && (
-                    <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {quiz.topics.map((topicName, index) => (
-                        <Chip 
-                          key={`topic-${index}-${topicName}`} 
-                          label={topicName} 
-                          size="small" 
-                          variant="outlined"
-                        />
-                      ))}
-                    </Box>
-                  )}
-                </CardContent>
-                <CardActions>
-                  <Button 
-                    size="small" 
-                    component={RouterLink} 
-                    to={`/quiz/${quiz.id}`}
-                    variant="contained"
-                    fullWidth
-                  >
-                    Start Quiz
-                  </Button>
-                </CardActions>
-              </Card>
+              <QuizCard quiz={quiz} getDifficultyColor={getDifficultyColor} />
             </Grid>
           ))}
         </Grid>

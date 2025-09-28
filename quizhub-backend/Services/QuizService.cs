@@ -1,10 +1,11 @@
 ﻿using quizhub_backend.DTOs;
 using quizhub_backend.Models;
 using quizhub_backend.Repository;
+using quizhub_backend.Services.ServiceInterfaces;
 
 namespace quizhub_backend.Services
 {
-    public class QuizService
+    public class QuizService : IQuizService
     {
         private readonly QuizRepository _quizRepository;
 

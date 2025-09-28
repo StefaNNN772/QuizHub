@@ -1,13 +1,14 @@
 ﻿using Microsoft.IdentityModel.Tokens;
 using quizhub_backend.DTOs;
 using quizhub_backend.Models;
+using quizhub_backend.Services.ServiceInterfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
 namespace quizhub_backend.Services
 {
-    public class TokenService
+    public class TokenService : ITokenService
     {
         private string APP_NAME = "quizHubv1";  // Izdavač tokena
         private string SECRET = "ThisIsAVeryLongSecretKeyThatIsAtLeast64BytesLongForHmacSha512_ExtraPaddingFor512Bits#2025!";

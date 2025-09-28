@@ -1,8 +1,9 @@
 ﻿using quizhub_backend.Repository;
+using quizhub_backend.Services.ServiceInterfaces;
 
 namespace quizhub_backend.Services
 {
-    public class AuthenticationManager
+    public class AuthenticationManager : IAuthenticationManager
     {
         private readonly UserRepository _userRepository;
 

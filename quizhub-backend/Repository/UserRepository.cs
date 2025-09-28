@@ -74,6 +74,9 @@ namespace quizhub_backend.Repository
             };
             _context.Users.Add(userDTO);
             await _context.SaveChangesAsync();
+
+            user.Id = userDTO.Id;
+
             return user;
         }
 

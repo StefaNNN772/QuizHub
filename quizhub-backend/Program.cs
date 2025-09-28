@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using quizhub_backend.Data;
 using quizhub_backend.Repository;
 using quizhub_backend.Services;
+using quizhub_backend.Services.ServiceInterfaces;
 using System.Text;
 
 public class Program
@@ -56,20 +57,20 @@ public class Program
 
         builder.Services.AddHttpClient();
 
-        builder.Services.AddScoped<UserService>();
+        builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<UserRepository>();
-        builder.Services.AddScoped<QuizService>();
+        builder.Services.AddScoped<IQuizService, QuizService>();
         builder.Services.AddScoped<QuizRepository>();
-        builder.Services.AddScoped<QuestionService>();
+        builder.Services.AddScoped<IQuestionService, QuestionService>();
         builder.Services.AddScoped<QuestionRepository>();
-        builder.Services.AddScoped<AnswerService>();
+        builder.Services.AddScoped<IAnswerService, AnswerService>();
         builder.Services.AddScoped<AnswerRepository>();
-        builder.Services.AddScoped<ResultService>();
+        builder.Services.AddScoped<IResultService, ResultService>();
         builder.Services.AddScoped<ResultRepository>();
-        builder.Services.AddScoped<TopicService>();
+        builder.Services.AddScoped<ITopicService, TopicService>();
         builder.Services.AddScoped<TopicRepository>();
-        builder.Services.AddScoped<TokenService>();
-        builder.Services.AddScoped<AuthenticationManager>();
+        builder.Services.AddScoped<ITokenService, TokenService>();
+        builder.Services.AddScoped<IAuthenticationManager, AuthenticationManager>();
         //builder.Services.AddScoped<EmailService>();
         //builder.Services.AddScoped<SchedulesRepository>();
         //builder.Services.AddScoped<SchedulesService>();

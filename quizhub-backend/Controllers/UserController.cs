@@ -4,6 +4,7 @@ using quizhub_backend.DTOs;
 using quizhub_backend.Models;
 using quizhub_backend.Repository;
 using quizhub_backend.Services;
+using quizhub_backend.Services.ServiceInterfaces;
 using System.Security.Claims;
 
 namespace quizhub_backend.Controllers
@@ -12,12 +13,12 @@ namespace quizhub_backend.Controllers
     [Route("/")]
     public class UserController : ControllerBase
     {
-        private readonly UserService _userService;
-        private readonly TokenService _tokenService;
-        private readonly AuthenticationManager _authenticationManager;
+        private readonly IUserService _userService;
+        private readonly ITokenService _tokenService;
+        private readonly IAuthenticationManager _authenticationManager;
         private readonly IWebHostEnvironment _env;
 
-        public UserController(UserService userService, TokenService tokenService, AuthenticationManager authenticationManager, IWebHostEnvironment env)
+        public UserController(IUserService userService, ITokenService tokenService, IAuthenticationManager authenticationManager, IWebHostEnvironment env)
         {
             this._userService = userService;
             this._tokenService = tokenService;
@@ -110,8 +111,6 @@ namespace quizhub_backend.Controllers
                 return StatusCode(500, "An error occurred while creating the user.");
             }
 
-
-            // Generate JWT token
             var jwt = _tokenService.GenerateToken(createdUser);
             var expiresIn = _tokenService.GetExpiresIn();
 
@@ -134,7 +133,6 @@ namespace quizhub_backend.Controllers
         [Produces("application/json")]
         public async Task<IActionResult> GetCurrentUser()
         {
-            // Token je već verifikovan kroz [Authorize] atribut
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (string.IsNullOrEmpty(userId))

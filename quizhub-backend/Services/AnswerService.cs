@@ -1,9 +1,10 @@
 ﻿using quizhub_backend.DTOs;
 using quizhub_backend.Repository;
+using quizhub_backend.Services.ServiceInterfaces;
 
 namespace quizhub_backend.Services
 {
-    public class AnswerService
+    public class AnswerService : IAnswerService
     {
         private readonly AnswerRepository _answerRepository;
 

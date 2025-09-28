@@ -4,12 +4,6 @@ import {
   Box, 
   Button, 
   Paper, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow,
   IconButton,
   Dialog,
   DialogActions,
@@ -22,7 +16,6 @@ import {
   MenuItem,
   Grid,
   Chip,
-  Divider,
   CircularProgress,
   Alert,
   Accordion,
@@ -83,15 +76,12 @@ const AdminQuestions: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch quiz details
       const quizData = await getQuizById(parseInt(id!));
       setQuiz(quizData);
       
-      // Fetch questions
       const questionsData = await getQuestions(parseInt(id!));
       setQuestions(questionsData);
       
-      // Fetch answers for each question
       const answersMapData = new Map<number, Answer[]>();
       await Promise.all(
         questionsData.map(async (question) => {
@@ -137,14 +127,18 @@ const AdminQuestions: React.FC = () => {
           type: values.type as QuestionType,
         };
         
+        let newQuestion: Question | null = null;
+
         if (currentQuestion) {
-          // Update existing question
           await updateQuestion(currentQuestion.id, questionData);
         } else {
-          // Create new question
-          console.log(questionData)
-          const newQuestion = await createQuestion(questionData);
-          setQuestions([...questions, newQuestion]);
+          newQuestion = await createQuestion(questionData);
+
+          // True/False pitanje -> dodaj oba odgovora netačna, kasnije korisnik bira koji je tačan
+          if (values.type === QuestionType.TrueOrFalse && newQuestion) {
+            await createAnswer({ questionId: newQuestion.id, answerBody: "True", isTrue: false });
+            await createAnswer({ questionId: newQuestion.id, answerBody: "False", isTrue: false });
+          }
         }
         
         await fetchData();
@@ -176,6 +170,21 @@ const AdminQuestions: React.FC = () => {
       try {
         setSubmitLoading(true);
         setError(null);
+
+        // Pravila za tip pitanja
+        if (currentQuestion.type === QuestionType.OneAnswer && values.isTrue) {
+          const existingAnswers = answersMap.get(currentQuestion.id) || [];
+          const alreadyHasTrue = existingAnswers.some(a => a.isTrue && (!currentAnswer || a.id !== currentAnswer.id));
+          if (alreadyHasTrue) {
+            setError("One Answer type question can only have one correct answer.");
+            setSubmitLoading(false);
+            return;
+          }
+        }
+
+        if (currentQuestion.type === QuestionType.FillInTheBlank) {
+          values.isTrue = true; // uvijek tačan
+        }
         
         const answerData = {
           ...values,
@@ -183,10 +192,8 @@ const AdminQuestions: React.FC = () => {
         };
         
         if (currentAnswer) {
-          // Update existing answer
           await updateAnswer(currentAnswer.id, answerData);
         } else {
-          // Create new answer
           await createAnswer(answerData);
         }
         
@@ -251,7 +258,6 @@ const AdminQuestions: React.FC = () => {
         setQuestions(questions.filter(q => q.id !== itemToDelete.id));
       } else {
         await deleteAnswer(itemToDelete.id);
-        // We'll refresh the data to update the answers
       }
       
       setDeleteDialogOpen(false);
@@ -353,13 +359,15 @@ const AdminQuestions: React.FC = () => {
                   <Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                       <Typography variant="subtitle1">Answers</Typography>
-                      <Button 
-                        size="small" 
-                        startIcon={<AddIcon />}
-                        onClick={() => handleOpenAnswerDialog(question)}
-                      >
-                        Add Answer
-                      </Button>
+                      {question.type !== QuestionType.TrueOrFalse && (
+                        <Button 
+                          size="small" 
+                          startIcon={<AddIcon />}
+                          onClick={() => handleOpenAnswerDialog(question)}
+                        >
+                          Add Answer
+                        </Button>
+                      )}
                     </Box>
                     
                     {answers.length > 0 ? (
@@ -369,6 +377,7 @@ const AdminQuestions: React.FC = () => {
                             key={answer.id}
                             secondaryAction={
                               <Box>
+                                {/* Za True/False: može se editovati, ali ne i obrisati */}
                                 <IconButton 
                                   edge="end" 
                                   size="small"
@@ -376,13 +385,16 @@ const AdminQuestions: React.FC = () => {
                                 >
                                   <EditIcon fontSize="small" />
                                 </IconButton>
-                                <IconButton 
-                                  edge="end" 
-                                  size="small"
-                                  onClick={() => handleOpenDeleteDialog('answer', answer.id)}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
+
+                                {question.type !== QuestionType.TrueOrFalse && (
+                                  <IconButton 
+                                    edge="end" 
+                                    size="small"
+                                    onClick={() => handleOpenDeleteDialog('answer', answer.id)}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                )}
                               </Box>
                             }
                             sx={{
@@ -521,36 +533,51 @@ const AdminQuestions: React.FC = () => {
         </DialogTitle>
         <form onSubmit={answerFormik.handleSubmit}>
           <DialogContent>
-            <TextField
-              fullWidth
-              id="answerBody"
-              name="answerBody"
-              label="Answer Text"
-              multiline
-              rows={2}
-              value={answerFormik.values.answerBody}
-              onChange={answerFormik.handleChange}
-              error={answerFormik.touched.answerBody && Boolean(answerFormik.errors.answerBody)}
-              helperText={answerFormik.touched.answerBody && answerFormik.errors.answerBody}
-              sx={{ mb: 3 }}
-            />
-            
-            <FormControl fullWidth>
-              <InputLabel id="isTrue-label">Answer Status</InputLabel>
-              <Select
-                labelId="isTrue-label"
-                id="isTrue"
-                name="isTrue"
-                value={answerFormik.values.isTrue ? "true" : "false"}
-                label="Answer Status"
-                onChange={e => {
-                  answerFormik.setFieldValue("isTrue", e.target.value === "true");
-                }}
-              >
-                <MenuItem value="true">Correct Answer</MenuItem>
-                <MenuItem value="false">Incorrect Answer</MenuItem>
-              </Select>
-            </FormControl>
+            {currentQuestion?.type === QuestionType.FillInTheBlank ? (
+              <TextField
+                fullWidth
+                id="answerBody"
+                name="answerBody"
+                label="Correct Answer"
+                value={answerFormik.values.answerBody}
+                onChange={answerFormik.handleChange}
+                error={answerFormik.touched.answerBody && Boolean(answerFormik.errors.answerBody)}
+                helperText={answerFormik.touched.answerBody && answerFormik.errors.answerBody}
+                sx={{ mb: 3 }}
+              />
+            ) : (
+              <>
+                <TextField
+                  fullWidth
+                  id="answerBody"
+                  name="answerBody"
+                  label="Answer Text"
+                  multiline
+                  rows={2}
+                  value={answerFormik.values.answerBody}
+                  onChange={answerFormik.handleChange}
+                  error={answerFormik.touched.answerBody && Boolean(answerFormik.errors.answerBody)}
+                  helperText={answerFormik.touched.answerBody && answerFormik.errors.answerBody}
+                  sx={{ mb: 3 }}
+                />
+                <FormControl fullWidth>
+                  <InputLabel id="isTrue-label">Answer Status</InputLabel>
+                  <Select
+                    labelId="isTrue-label"
+                    id="isTrue"
+                    name="isTrue"
+                    value={answerFormik.values.isTrue ? "true" : "false"}
+                    label="Answer Status"
+                    onChange={e => {
+                      answerFormik.setFieldValue("isTrue", e.target.value === "true");
+                    }}
+                  >
+                    <MenuItem value="true">Correct Answer</MenuItem>
+                    <MenuItem value="false">Incorrect Answer</MenuItem>
+                  </Select>
+                </FormControl>
+              </>
+            )}
           </DialogContent>
           <DialogActions>
             <Button 
@@ -572,11 +599,9 @@ const AdminQuestions: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to delete this {itemToDelete?.type}? This action cannot be undone.
-          </Typography>
+          Are you sure you want to delete this {itemToDelete?.type}?
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)} disabled={submitLoading}>
@@ -585,6 +610,7 @@ const AdminQuestions: React.FC = () => {
           <Button 
             onClick={handleDelete} 
             color="error" 
+            variant="contained"
             disabled={submitLoading}
           >
             {submitLoading ? 'Deleting...' : 'Delete'}
