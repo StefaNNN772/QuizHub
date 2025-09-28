@@ -1,6 +1,6 @@
 # QuizHub
 
-Full-stack aplikacija za kvizove napravljena sa **React + Vite** (frontend) i **ASP.NET Core** (backend) koristeći **SQL Server** sa EF Core migracijama.
+Full-stack aplikacija za kvizove napravljena sa **React + Vite** (frontend) i **ASP.NET Core** (backend) koristeci **SQL Server** sa EF Core migracijama.
 
 ---
 
@@ -8,7 +8,7 @@ Full-stack aplikacija za kvizove napravljena sa **React + Vite** (frontend) i **
 
 ### 1. Backend
 
-1. Uđi u backend folder:
+1. Udji u backend folder:
    ```bash
    cd quizhub-backend
 
