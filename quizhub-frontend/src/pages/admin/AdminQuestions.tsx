@@ -1,50 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Typography, 
-  Box, 
-  Button, 
-  Paper, 
-  IconButton,
+import { useParams, useNavigate } from 'react-router-dom';
+import {
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Button,
   TextField,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   Grid,
-  Chip,
-  CircularProgress,
-  Alert,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  List,
-  ListItem,
-  ListItemText,
-  Tooltip
+  Typography,
+  Alert
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  getQuizById, 
-  getQuestions, 
-  getAnswers, 
-  createQuestion, 
-  updateQuestion, 
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import AdminQuestionsList from '../../components/admin/AdminQuestionsList';
+import {
+  getQuizById,
+  getQuestions,
+  getAnswers,
+  createQuestion,
+  updateQuestion,
   deleteQuestion,
   createAnswer,
   updateAnswer,
   deleteAnswer
 } from '../../api/quizService';
 import { Quiz, Question, Answer, QuestionType } from '../../types/models';
-import { useFormik } from 'formik';
-import * as Yup from 'yup';
 
 const AdminQuestions: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -54,12 +39,15 @@ const AdminQuestions: React.FC = () => {
   const [answersMap, setAnswersMap] = useState<Map<number, Answer[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Dialog states
   const [questionDialogOpen, setQuestionDialogOpen] = useState(false);
   const [answerDialogOpen, setAnswerDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
+
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [currentAnswer, setCurrentAnswer] = useState<Answer | null>(null);
-  const [submitLoading, setSubmitLoading] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ type: 'question' | 'answer', id: number } | null>(null);
 
   useEffect(() => {
@@ -67,7 +55,6 @@ const AdminQuestions: React.FC = () => {
       navigate('/admin/quizzes');
       return;
     }
-    
     fetchData();
   }, [id]);
 
@@ -75,13 +62,13 @@ const AdminQuestions: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const quizData = await getQuizById(parseInt(id!));
       setQuiz(quizData);
-      
+
       const questionsData = await getQuestions(parseInt(id!));
       setQuestions(questionsData);
-      
+
       const answersMapData = new Map<number, Answer[]>();
       await Promise.all(
         questionsData.map(async (question) => {
@@ -90,16 +77,15 @@ const AdminQuestions: React.FC = () => {
         })
       );
       setAnswersMap(answersMapData);
-      
+
     } catch (err) {
-      console.error('Error fetching quiz data:', err);
       setError('Failed to load quiz data. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Question Form
+  // Question Formik
   const questionFormik = useFormik({
     initialValues: {
       body: '',
@@ -116,17 +102,16 @@ const AdminQuestions: React.FC = () => {
     }),
     onSubmit: async (values) => {
       if (!id) return;
-      
       try {
         setSubmitLoading(true);
         setError(null);
-        
+
         const questionData = {
           ...values,
           quizId: parseInt(id),
           type: values.type as QuestionType,
         };
-        
+
         let newQuestion: Question | null = null;
 
         if (currentQuestion) {
@@ -134,19 +119,17 @@ const AdminQuestions: React.FC = () => {
         } else {
           newQuestion = await createQuestion(questionData);
 
-          // True/False pitanje -> dodaj oba odgovora netačna, kasnije korisnik bira koji je tačan
           if (values.type === QuestionType.TrueOrFalse && newQuestion) {
             await createAnswer({ questionId: newQuestion.id, answerBody: "True", isTrue: false });
             await createAnswer({ questionId: newQuestion.id, answerBody: "False", isTrue: false });
           }
         }
-        
+
         await fetchData();
         setQuestionDialogOpen(false);
         setCurrentQuestion(null);
         questionFormik.resetForm();
-      } catch (err) {
-        console.error('Error saving question:', err);
+      } catch {
         setError('Failed to save question. Please try again.');
       } finally {
         setSubmitLoading(false);
@@ -154,7 +137,7 @@ const AdminQuestions: React.FC = () => {
     },
   });
 
-  // Answer Form
+  // Answer Formik
   const answerFormik = useFormik({
     initialValues: {
       answerBody: '',
@@ -166,12 +149,10 @@ const AdminQuestions: React.FC = () => {
     }),
     onSubmit: async (values) => {
       if (!currentQuestion) return;
-      
       try {
         setSubmitLoading(true);
         setError(null);
 
-        // Pravila za tip pitanja
         if (currentQuestion.type === QuestionType.OneAnswer && values.isTrue) {
           const existingAnswers = answersMap.get(currentQuestion.id) || [];
           const alreadyHasTrue = existingAnswers.some(a => a.isTrue && (!currentAnswer || a.id !== currentAnswer.id));
@@ -181,28 +162,26 @@ const AdminQuestions: React.FC = () => {
             return;
           }
         }
-
         if (currentQuestion.type === QuestionType.FillInTheBlank) {
-          values.isTrue = true; // uvijek tačan
+          values.isTrue = true;
         }
-        
+
         const answerData = {
           ...values,
           questionId: currentQuestion.id,
         };
-        
+
         if (currentAnswer) {
           await updateAnswer(currentAnswer.id, answerData);
         } else {
           await createAnswer(answerData);
         }
-        
+
         await fetchData();
         setAnswerDialogOpen(false);
         setCurrentAnswer(null);
         answerFormik.resetForm();
-      } catch (err) {
-        console.error('Error saving answer:', err);
+      } catch {
         setError('Failed to save answer. Please try again.');
       } finally {
         setSubmitLoading(false);
@@ -210,6 +189,7 @@ const AdminQuestions: React.FC = () => {
     },
   });
 
+  // Handler functions for dialogs
   const handleOpenQuestionDialog = (question?: Question) => {
     if (question) {
       setCurrentQuestion(question);
@@ -227,7 +207,7 @@ const AdminQuestions: React.FC = () => {
 
   const handleOpenAnswerDialog = (question: Question, answer?: Answer) => {
     setCurrentQuestion(question);
-    
+
     if (answer) {
       setCurrentAnswer(answer);
       answerFormik.setValues({
@@ -238,7 +218,7 @@ const AdminQuestions: React.FC = () => {
       setCurrentAnswer(null);
       answerFormik.resetForm();
     }
-    
+
     setAnswerDialogOpen(true);
   };
 
@@ -249,201 +229,43 @@ const AdminQuestions: React.FC = () => {
 
   const handleDelete = async () => {
     if (!itemToDelete) return;
-    
+
     try {
       setSubmitLoading(true);
-      
+
       if (itemToDelete.type === 'question') {
         await deleteQuestion(itemToDelete.id);
         setQuestions(questions.filter(q => q.id !== itemToDelete.id));
       } else {
         await deleteAnswer(itemToDelete.id);
       }
-      
+
       setDeleteDialogOpen(false);
       setItemToDelete(null);
       fetchData();
-    } catch (err) {
-      console.error(`Error deleting ${itemToDelete.type}:`, err);
+    } catch {
       setError(`Failed to delete ${itemToDelete.type}. Please try again.`);
     } finally {
       setSubmitLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (!quiz) {
-    return <Alert severity="error">Quiz not found</Alert>;
-  }
-
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h4" gutterBottom>
-            Manage Questions
-          </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
-            {quiz.title}
-          </Typography>
-        </Box>
-        <Box>
-          <Button 
-            variant="contained" 
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenQuestionDialog()}
-          >
-            Add Question
-          </Button>
-        </Box>
-      </Box>
-
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-
-      {questions.length > 0 ? (
-        <Box>
-          {questions.map((question) => {
-            const answers = answersMap.get(question.id) || [];
-            return (
-              <Accordion key={question.id} sx={{ mb: 2 }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Typography sx={{ mr: 2 }}>{question.body}</Typography>
-                      <Chip 
-                        label={`${question.points} pts`} 
-                        size="small" 
-                        sx={{ mr: 1 }} 
-                      />
-                      <Chip 
-                        label={question.type.replace(/([A-Z])/g, ' $1').trim()} 
-                        size="small" 
-                        color="primary" 
-                        variant="outlined" 
-                      />
-                    </Box>
-                    <Box>
-                      <Tooltip title="Edit Question">
-                        <IconButton 
-                          size="small" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenQuestionDialog(question);
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete Question">
-                        <IconButton 
-                          size="small" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenDeleteDialog('question', question.id);
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </Box>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <Typography variant="subtitle1">Answers</Typography>
-                      {question.type !== QuestionType.TrueOrFalse && (
-                        <Button 
-                          size="small" 
-                          startIcon={<AddIcon />}
-                          onClick={() => handleOpenAnswerDialog(question)}
-                        >
-                          Add Answer
-                        </Button>
-                      )}
-                    </Box>
-                    
-                    {answers.length > 0 ? (
-                      <List sx={{ width: '100%' }}>
-                        {answers.map((answer) => (
-                          <ListItem
-                            key={answer.id}
-                            secondaryAction={
-                              <Box>
-                                {/* Za True/False: može se editovati, ali ne i obrisati */}
-                                <IconButton 
-                                  edge="end" 
-                                  size="small"
-                                  onClick={() => handleOpenAnswerDialog(question, answer)}
-                                >
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-
-                                {question.type !== QuestionType.TrueOrFalse && (
-                                  <IconButton 
-                                    edge="end" 
-                                    size="small"
-                                    onClick={() => handleOpenDeleteDialog('answer', answer.id)}
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
-                                )}
-                              </Box>
-                            }
-                            sx={{
-                              bgcolor: answer.isTrue ? 'rgba(76, 175, 80, 0.1)' : 'inherit',
-                              borderRadius: 1,
-                              mb: 1
-                            }}
-                          >
-                            <ListItemText
-                              primary={answer.answerBody}
-                              secondary={answer.isTrue ? 'Correct answer' : 'Incorrect answer'}
-                            />
-                          </ListItem>
-                        ))}
-                      </List>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        No answers added yet.
-                      </Typography>
-                    )}
-                  </Box>
-                </AccordionDetails>
-              </Accordion>
-            );
-          })}
-        </Box>
-      ) : (
-        <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <Typography variant="body1" paragraph>
-            No questions added to this quiz yet.
-          </Typography>
-          <Button 
-            variant="contained" 
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenQuestionDialog()}
-          >
-            Add First Question
-          </Button>
-        </Paper>
-      )}
-
-      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-        <Button 
-          variant="outlined" 
-          onClick={() => navigate('/admin/quizzes')}
-        >
-          Back to Quizzes
-        </Button>
-      </Box>
+    <>
+      <AdminQuestionsList
+        quiz={quiz}
+        questions={questions}
+        answersMap={answersMap}
+        loading={loading}
+        error={error}
+        onEditQuestion={handleOpenQuestionDialog}
+        onDeleteQuestion={(id) => handleOpenDeleteDialog('question', id)}
+        onAddQuestion={() => handleOpenQuestionDialog()}
+        onAddAnswer={(q) => handleOpenAnswerDialog(q)}
+        onEditAnswer={handleOpenAnswerDialog}
+        onDeleteAnswer={(id) => handleOpenDeleteDialog('answer', id)}
+        onBack={() => navigate('/admin/quizzes')}
+      />
 
       {/* Question Dialog */}
       <Dialog open={questionDialogOpen} onClose={() => setQuestionDialogOpen(false)} maxWidth="md" fullWidth>
@@ -467,7 +289,7 @@ const AdminQuestions: React.FC = () => {
                   helperText={questionFormik.touched.body && questionFormik.errors.body}
                 />
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth error={questionFormik.touched.type && Boolean(questionFormik.errors.type)}>
                   <InputLabel id="type-label">Question Type</InputLabel>
@@ -491,7 +313,7 @@ const AdminQuestions: React.FC = () => {
                   )}
                 </FormControl>
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
@@ -509,14 +331,14 @@ const AdminQuestions: React.FC = () => {
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button 
-              onClick={() => setQuestionDialogOpen(false)} 
+            <Button
+              onClick={() => setQuestionDialogOpen(false)}
               disabled={submitLoading}
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               variant="contained"
               disabled={submitLoading}
             >
@@ -525,7 +347,6 @@ const AdminQuestions: React.FC = () => {
           </DialogActions>
         </form>
       </Dialog>
-
       {/* Answer Dialog */}
       <Dialog open={answerDialogOpen} onClose={() => setAnswerDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
@@ -580,14 +401,14 @@ const AdminQuestions: React.FC = () => {
             )}
           </DialogContent>
           <DialogActions>
-            <Button 
-              onClick={() => setAnswerDialogOpen(false)} 
+            <Button
+              onClick={() => setAnswerDialogOpen(false)}
               disabled={submitLoading}
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               variant="contained"
               disabled={submitLoading}
             >
@@ -596,7 +417,6 @@ const AdminQuestions: React.FC = () => {
           </DialogActions>
         </form>
       </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Confirm Delete</DialogTitle>
@@ -607,9 +427,9 @@ const AdminQuestions: React.FC = () => {
           <Button onClick={() => setDeleteDialogOpen(false)} disabled={submitLoading}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleDelete} 
-            color="error" 
+          <Button
+            onClick={handleDelete}
+            color="error"
             variant="contained"
             disabled={submitLoading}
           >
@@ -617,7 +437,7 @@ const AdminQuestions: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </>
   );
 };
 

@@ -32,7 +32,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import { getAllResults, getQuizzes } from '../../api/quizService';
 import { Result, Quiz } from '../../types/models';
 
-const API_BASE_URL = 'http://localhost:5143/';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const AdminResults: React.FC = () => {
   const [results, setResults] = useState<Result[]>([]);

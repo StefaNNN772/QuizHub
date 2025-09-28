@@ -4,7 +4,7 @@ import { AppBar, Toolbar, Typography, Button, Box, Container, Avatar } from '@mu
 import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const API_BASE_URL = 'http://localhost:5143/';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const MainLayout: React.FC = () => {
   const { isAuthenticated, isAdmin, user, logout } = useAuth();
