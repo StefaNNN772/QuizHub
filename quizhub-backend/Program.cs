@@ -26,8 +26,8 @@ public class Program
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = "quizHubv1", // Isti kao APP_NAME u TokenService
-                ValidAudience = "web", // Isti kao AUDIENCE_WEB u TokenService
+                ValidIssuer = "quizHubv1",
+                ValidAudience = "web",
                 IssuerSigningKey = new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes("ThisIsAVeryLongSecretKeyThatIsAtLeast64BytesLongForHmacSha512_ExtraPaddingFor512Bits#2025!"))
             };
@@ -71,23 +71,9 @@ public class Program
         builder.Services.AddScoped<TopicRepository>();
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IAuthenticationManager, AuthenticationManager>();
-        //builder.Services.AddScoped<EmailService>();
-        //builder.Services.AddScoped<SchedulesRepository>();
-        //builder.Services.AddScoped<SchedulesService>();
-        //builder.Services.AddScoped<BusLinesRepository>();
-        //builder.Services.AddScoped<BusLinesService>();
-        //builder.Services.AddScoped<MapAPI>();
-        //builder.Services.AddScoped<ProviderService>();
-        //builder.Services.AddScoped<ProviderRepository>();
-        //builder.Services.AddScoped<BusReservationRepository>();
-        //builder.Services.AddScoped<BusReservationService>();
-        //builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
-        //builder.Services.AddScoped<FavouritesRepository>();
-        //builder.Services.AddScoped<FavouritesService>();
 
         var app = builder.Build();
 
-        // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
